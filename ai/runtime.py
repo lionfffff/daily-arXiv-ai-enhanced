@@ -27,7 +27,7 @@ def build_chat_openai_kwargs(model_name: str, base_url: str, api_key: str) -> di
         "api_key": api_key,
     }
     hostname = urlparse(base_url).hostname or ""
-    if hostname.endswith("volces.com"):
+    if hostname.endswith("volces.com") or hostname in {"api.deepseek.com"}:
         kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
     return kwargs
 

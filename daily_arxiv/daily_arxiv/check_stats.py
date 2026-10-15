@@ -11,6 +11,7 @@
 import json
 import sys
 import os
+import subprocess
 from datetime import datetime, timedelta
 
 def load_papers_data(file_path):
@@ -60,6 +61,28 @@ def save_papers_data(papers, file_path):
         print(f"Error saving {file_path}: {e}", file=sys.stderr)
         return False
 
+
+def load_history_ids(date_str):
+    """Read published history from the data branch when it is absent on main."""
+    history_file = f"../data/{date_str}.jsonl"
+    if os.path.exists(history_file):
+        _, ids = load_papers_data(history_file)
+        return ids
+
+    result = subprocess.run(
+        ["git", "show", f"origin/data:data/{date_str}.jsonl"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    if result.returncode != 0:
+        return set()
+    try:
+        return {json.loads(line).get("id", "") for line in result.stdout.splitlines() if line.strip()}
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid history data for {date_str}") from exc
+
 def perform_deduplication():
     """
     执行多日去重：删除与历史多日重复的论文条目，保留新内容
@@ -92,9 +115,7 @@ def perform_deduplication():
         history_ids = set()
         for i in range(1, history_days + 1):
             date_str = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
-            history_file = f"../data/{date_str}.jsonl"
-            _, past_ids = load_papers_data(history_file)
-            history_ids.update(past_ids)
+            history_ids.update(load_history_ids(date_str))
 
         print(f"历史{history_days}日去重库大小: {len(history_ids)} / History {history_days} days deduplication library size: {len(history_ids)}", file=sys.stderr)
 
@@ -162,4 +183,4 @@ def main():
         sys.exit(2)
 
 if __name__ == "__main__":
-    main() 
+    main()

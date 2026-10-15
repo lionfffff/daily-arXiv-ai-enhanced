@@ -1,0 +1,72 @@
+{
+  "name": "AI for sports movement research",
+  "candidate_terms": [
+    "pose estimation",
+    "human pose",
+    "human keypoint",
+    "body keypoint",
+    "3d pose",
+    "2d pose",
+    "skeleton based",
+    "skeleton action",
+    "human skeleton",
+    "human motion",
+    "human movement",
+    "human activity",
+    "human action",
+    "action recognition",
+    "action understanding",
+    "action quality",
+    "action assessment",
+    "action evaluation",
+    "aqa",
+    "fine grained action",
+    "motion quality",
+    "movement quality",
+    "motion capture",
+    "gymnastic",
+    "gymnastics",
+    "finegym",
+    "finediving",
+    "sports video",
+    "sports",
+    "sport action",
+    "athletic performance",
+    "coaching feedback",
+    "actionable feedback",
+    "action coaching",
+    "skill assessment",
+    "corrective feedback",
+    "exercise assessment",
+    "running gait",
+    "gait",
+    "running analysis",
+    "gait analysis",
+    "gait recognition",
+    "locomotion",
+    "biomechanics",
+    "kinematics"
+  ],
+  "research_focus": "AI for sports, especially gymnastics teaching and running. Core methods are 2D/3D whole-body human pose estimation, skeleton-based action understanding, action quality assessment, and actionable coaching feedback. Gymnastics work includes standard-versus-incorrect action videos, fine-grained steps and labels, and dataset construction. Running work includes 3D pose, gait analysis, and sports biomechanics.",
+  "relevant": [
+    "Sports or whole-body human movement pose estimation, action quality assessment, error detection, coaching, or actionable feedback.",
+    "Sports or whole-body action datasets, especially fine-grained annotation, action steps, or correct-versus-incorrect examples.",
+    "Transferable new methods for 2D/3D whole-body pose, skeleton action recognition, video action understanding, gait, or sports biomechanics."
+  ],
+  "maybe": [
+    "Dance, rehabilitation movement assessment, or general whole-body action recognition without a direct sports setting.",
+    "Skeleton-based general action understanding or video-language methods that can explain or coach human movement.",
+    "Human motion generation that may transfer to movement feedback but is not directly about assessment."
+  ],
+  "irrelevant": [
+    "Computer vision unrelated to human movement, such as autonomous driving, face recognition, generic object detection, or non-movement medical images.",
+    "Pose estimation only for hands, faces, animals, cameras, or other non-whole-body subjects.",
+    "Pure theory, NLP, or LLM work without a substantive connection to visual human movement."
+  ],
+  "reference_papers": [
+    "ExpertAF: Expert Actionable Feedback from Video",
+    "TechCoach: Towards Technical Keypoint-Aware Descriptive Action Coaching",
+    "FineDiving: A Fine-grained Dataset for Procedure-aware Action Quality Assessment",
+    "FineGym: A Hierarchical Video Dataset for Fine-grained Action Understanding"
+  ]
+}

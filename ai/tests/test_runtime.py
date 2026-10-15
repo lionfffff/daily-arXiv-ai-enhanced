@@ -1,6 +1,6 @@
 import unittest
 
-from runtime import build_chat_openai_kwargs, raise_if_processing_failed
+from ai.runtime import build_chat_openai_kwargs, raise_if_processing_failed
 
 
 class BuildChatOpenAIKwargsTests(unittest.TestCase):
@@ -29,6 +29,14 @@ class BuildChatOpenAIKwargsTests(unittest.TestCase):
             {"thinking": {"type": "disabled"}},
             kwargs["extra_body"],
         )
+
+    def test_deepseek_disables_thinking_for_structured_function_calls(self):
+        kwargs = build_chat_openai_kwargs(
+            model_name="deepseek-v4-pro",
+            base_url="https://api.deepseek.com",
+            api_key="test-key",
+        )
+        self.assertEqual({"thinking": {"type": "disabled"}}, kwargs["extra_body"])
 
     def test_processing_error_is_reported_after_a_batch(self):
         """Catches swallowing authentication failures and publishing fallback summaries."""
