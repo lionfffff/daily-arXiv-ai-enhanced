@@ -736,6 +736,9 @@ function parseJsonlData(jsonlText, date) {
       }
       
       const summary = paper.AI && paper.AI.tldr ? paper.AI.tldr : paper.summary;
+      const submissionLabels = {new: 'New', cross: 'Cross-listed', replacement: 'Revised'};
+      const submissionLabel = submissionLabels[paper.submission_type] || '';
+      const version = /v(\d+)$/.exec(paper.version_id || '');
       
       result[primaryCategory].push({
         title: paper.title,
@@ -746,6 +749,7 @@ function parseJsonlData(jsonlText, date) {
         details: paper.summary || '',
         date: date,
         id: paper.id,
+        submissionLabel: submissionLabel ? `${submissionLabel}${version ? ` v${version[1]}` : ''}` : '',
         motivation: paper.AI && paper.AI.motivation ? paper.AI.motivation : '',
         method: paper.AI && paper.AI.method ? paper.AI.method : '',
         result: paper.AI && paper.AI.result ? paper.AI.result : '',
@@ -791,6 +795,7 @@ function showRelatedPapers(keyword) {
             <div class="paper-authors">${paper.authors}</div>
             <div class="paper-categories">
                 ${paper.category.map(cat => `<span class="category-tag">${cat}</span>`).join('')}
+                ${paper.submissionLabel ? `<span class="category-tag">${paper.submissionLabel}</span>` : ''}
             </div>
             <div class="paper-summary">${paper.summary}</div>
         </div>

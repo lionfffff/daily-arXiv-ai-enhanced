@@ -5,12 +5,16 @@ name: arXiv-daily-ai-enhanced
 
 on:
   schedule:
-    - cron: "0 7 * * *"
+    - cron: "0 10 * * *"
       timezone: "Asia/Shanghai"
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: arxiv-data
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -143,6 +147,15 @@ jobs:
         fi
         echo "AI增强处理完成 / AI enhancement processing completed"
         
+    - name: Preserve papers from earlier runs today
+      if: steps.relevance_check.outputs.has_relevant_content == 'true'
+      run: |
+        source .venv/bin/activate
+        today=${{ steps.crawl_step.outputs.crawl_date }}
+        python -m daily_arxiv.daily_arxiv.merge_published \
+          "data/${today}.jsonl" \
+          "data/${today}_AI_enhanced_${LANGUAGE}.jsonl"
+
     - name: Convert to Markdown
       if: steps.relevance_check.outputs.has_relevant_content == 'true'
       run: |

@@ -208,8 +208,9 @@ def main():
     seen_ids = set()
     unique_data = []
     for item in data:
-        if item['id'] not in seen_ids:
-            seen_ids.add(item['id'])
+        identity = item.get('version_id') or item['id']
+        if identity not in seen_ids:
+            seen_ids.add(identity)
             unique_data.append(item)
 
     data = unique_data

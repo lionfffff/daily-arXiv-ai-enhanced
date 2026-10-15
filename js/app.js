@@ -926,6 +926,8 @@ function parseJsonlData(jsonlText, date) {
         details: paper.summary || '',
         date: date,
         id: paper.id,
+        submission_type: paper.submission_type || '',
+        version_id: paper.version_id || '',
         motivation: paper.AI && paper.AI.motivation ? paper.AI.motivation : '',
         method: paper.AI && paper.AI.method ? paper.AI.method : '',
         result: paper.AI && paper.AI.result ? paper.AI.result : '',
@@ -940,6 +942,14 @@ function parseJsonlData(jsonlText, date) {
   });
   
   return result;
+}
+
+function getSubmissionLabel(paper) {
+  const labels = {new: 'New', cross: 'Cross-listed', replacement: 'Revised'};
+  const label = labels[paper.submission_type];
+  if (!label) return '';
+  const version = /v(\d+)$/.exec(paper.version_id || '');
+  return version ? `${label} v${version[1]}` : label;
 }
 
 // 获取所有类别并按偏好排序
@@ -1356,6 +1366,7 @@ function renderPapers() {
     const categoryTags = paper.allCategories ? 
       paper.allCategories.map(cat => `<span class="category-tag">${cat}</span>`).join('') : 
       `<span class="category-tag">${paper.category}</span>`;
+    const submissionLabel = getSubmissionLabel(paper);
     
     // 组合需要高亮的词：关键词 + 文本搜索
     const titleSummaryTerms = [];
@@ -1407,6 +1418,7 @@ function renderPapers() {
         <p class="paper-card-authors">${formattedAuthors}</p>
         <div class="paper-card-categories">
           ${categoryTags}
+          ${submissionLabel ? `<span class="category-tag">${submissionLabel}</span>` : ''}
         </div>
       </div>
       <div class="paper-card-body">
@@ -1503,6 +1515,7 @@ function showPaperDetails(paper, paperIndex) {
     <div class="paper-details ${matchedPaperClass}">
       <p><strong>Authors: </strong>${highlightedAuthors}</p>
       <p><strong>Categories: </strong>${categoryDisplay}</p>
+      ${getSubmissionLabel(paper) ? `<p><strong>Listing: </strong>${getSubmissionLabel(paper)}</p>` : ''}
       <p><strong>Date: </strong>${formatDate(paper.date)}</p>
       
       

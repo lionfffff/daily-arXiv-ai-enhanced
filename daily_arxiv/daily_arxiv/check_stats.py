@@ -11,8 +11,39 @@
 import json
 import sys
 import os
+import re
 import subprocess
 from datetime import datetime, timedelta
+
+BASE_ID_PATTERN = re.compile(r"(?:\d{4}\.\d{4,5}|[a-z][a-z.-]*/\d{7})\Z")
+VERSION_SUFFIX_PATTERN = re.compile(r"v[1-9]\d*\Z")
+SUBMISSION_PRIORITY = {"cross": 1, "new": 2, "replacement": 3}
+
+
+def paper_version_id(paper):
+    """Identify a specific revision, treating unversioned historic rows as v1."""
+    if not isinstance(paper, dict):
+        raise ValueError("Paper must be an object")
+
+    paper_id = paper.get("id")
+    if not isinstance(paper_id, str) or not paper_id:
+        raise ValueError("Paper is missing an arXiv ID")
+
+    version_id = paper.get("version_id")
+    if version_id is not None:
+        if (
+            not isinstance(version_id, str)
+            or not version_id.startswith(f"{paper_id}v")
+            or not VERSION_SUFFIX_PATTERN.fullmatch(version_id[len(paper_id):])
+        ):
+            raise ValueError(f"Invalid version_id for {paper_id}: {version_id}")
+        return version_id
+
+    base_id = re.sub(r"v[1-9]\d*\Z", "", paper_id)
+    if not BASE_ID_PATTERN.fullmatch(base_id):
+        raise ValueError(f"Invalid arXiv ID: {paper_id}")
+    return paper_id if base_id != paper_id else f"{paper_id}v1"
+
 
 def load_papers_data(file_path):
     """
@@ -24,7 +55,7 @@ def load_papers_data(file_path):
         
     Returns:
         list: 论文数据列表 / List of paper data
-        set: 论文ID集合 / Set of paper IDs
+        set: 论文版本ID集合 / Set of paper version IDs
     """
     if not os.path.exists(file_path):
         return [], set()
@@ -37,11 +68,11 @@ def load_papers_data(file_path):
                 if line.strip():
                     data = json.loads(line)
                     papers.append(data)
-                    ids.add(data.get('id', ''))
+                    ids.add(paper_version_id(data))
         return papers, ids
     except Exception as e:
         print(f"Error reading {file_path}: {e}", file=sys.stderr)
-        return [], set()
+        raise
 
 def save_papers_data(papers, file_path):
     """
@@ -62,10 +93,10 @@ def save_papers_data(papers, file_path):
         return False
 
 
-def load_history_ids(date_str):
+def load_history_ids(date_str, *, published_only=False):
     """Read published history from the data branch when it is absent on main."""
     history_file = f"../data/{date_str}.jsonl"
-    if os.path.exists(history_file):
+    if not published_only and os.path.exists(history_file):
         _, ids = load_papers_data(history_file)
         return ids
 
@@ -79,8 +110,8 @@ def load_history_ids(date_str):
     if result.returncode != 0:
         return set()
     try:
-        return {json.loads(line).get("id", "") for line in result.stdout.splitlines() if line.strip()}
-    except json.JSONDecodeError as exc:
+        return {paper_version_id(json.loads(line)) for line in result.stdout.splitlines() if line.strip()}
+    except ValueError as exc:
         raise ValueError(f"Invalid history data for {date_str}") from exc
 
 def perform_deduplication():
@@ -105,45 +136,47 @@ def perform_deduplication():
         return "no_data"
 
     try:
-        today_papers, today_ids = load_papers_data(today_file)
+        today_papers, _ = load_papers_data(today_file)
         print(f"今日论文总数: {len(today_papers)} / Today's total papers: {len(today_papers)}", file=sys.stderr)
 
         if not today_papers:
             return "no_data"
 
         # 收集历史多日 ID 集合
-        history_ids = set()
+        # Today's local file is the fresh crawl; compare it with the published copy.
+        history_ids = load_history_ids(today, published_only=True)
         for i in range(1, history_days + 1):
             date_str = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
             history_ids.update(load_history_ids(date_str))
 
         print(f"历史{history_days}日去重库大小: {len(history_ids)} / History {history_days} days deduplication library size: {len(history_ids)}", file=sys.stderr)
 
-        duplicate_ids = today_ids & history_ids
+        unique_papers = {}
+        for paper in today_papers:
+            version_id = paper_version_id(paper)
+            previous = unique_papers.get(version_id)
+            if previous is None or SUBMISSION_PRIORITY.get(paper.get("submission_type"), 0) > SUBMISSION_PRIORITY.get(previous.get("submission_type"), 0):
+                unique_papers[version_id] = paper
 
-        if duplicate_ids:
-            print(f"发现 {len(duplicate_ids)} 篇历史重复论文 / Found {len(duplicate_ids)} historical duplicate papers", file=sys.stderr)
-            new_papers = [paper for paper in today_papers if paper.get('id', '') not in duplicate_ids]
+        duplicate_ids = unique_papers.keys() & history_ids
+        new_papers = [paper for version_id, paper in unique_papers.items() if version_id not in history_ids]
+        print(f"同日重复: {len(today_papers) - len(unique_papers)}; 历史重复: {len(duplicate_ids)} / Same-day duplicates: {len(today_papers) - len(unique_papers)}; historical duplicates: {len(duplicate_ids)}", file=sys.stderr)
 
-            print(f"去重后剩余论文数: {len(new_papers)} / Remaining papers after deduplication: {len(new_papers)}", file=sys.stderr)
+        if not new_papers:
+            try:
+                os.remove(today_file)
+                print("所有论文均为重复内容，已删除今日文件 / All papers are duplicate content, today's file deleted", file=sys.stderr)
+            except Exception as e:
+                print(f"删除文件失败: {e} / Failed to delete file: {e}", file=sys.stderr)
+            return "no_new_content"
 
-            if new_papers:
-                if save_papers_data(new_papers, today_file):
-                    print(f"已更新今日文件，移除 {len(duplicate_ids)} 篇重复论文 / Today's file updated, removed {len(duplicate_ids)} duplicate papers", file=sys.stderr)
-                    return "has_new_content"
-                else:
-                    print("保存去重后的数据失败 / Failed to save deduplicated data", file=sys.stderr)
-                    return "error"
-            else:
-                try:
-                    os.remove(today_file)
-                    print("所有论文均为重复内容，已删除今日文件 / All papers are duplicate content, today's file deleted", file=sys.stderr)
-                except Exception as e:
-                    print(f"删除文件失败: {e} / Failed to delete file: {e}", file=sys.stderr)
-                return "no_new_content"
-        else:
-            print("所有内容均为新内容 / All content is new", file=sys.stderr)
-            return "has_new_content"
+        if len(new_papers) != len(today_papers):
+            if not save_papers_data(new_papers, today_file):
+                print("保存去重后的数据失败 / Failed to save deduplicated data", file=sys.stderr)
+                return "error"
+
+        print(f"去重后剩余论文数: {len(new_papers)} / Remaining papers after deduplication: {len(new_papers)}", file=sys.stderr)
+        return "has_new_content"
 
     except Exception as e:
         print(f"去重处理失败: {e} / Deduplication processing failed: {e}", file=sys.stderr)
