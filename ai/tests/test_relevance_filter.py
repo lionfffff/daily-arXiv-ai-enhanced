@@ -68,6 +68,21 @@ class RelevanceFilterTests(unittest.TestCase):
         self.assertEqual(["1"], [paper["id"] for paper in selected])
         self.assertEqual(1, counts["kept"])
 
+    def test_rejected_candidates_have_auditable_titles_terms_and_reasons(self):
+        decisions = []
+        paper = {"id": "1", "version_id": "1v2", "title": "Object pose estimation", "summary": "Robotic grasping"}
+        selected, counts = select_papers(
+            [paper], PROFILE, "semantic",
+            lambda _: {"label": "irrelevant", "reason": "物体位姿，与人体运动无关。"},
+            on_decision=decisions.append,
+        )
+        self.assertEqual([], selected)
+        self.assertEqual(0, counts["relevant"])
+        self.assertEqual([{
+            "id": "1v2", "title": paper["title"], "matched_terms": ["pose estimation"],
+            "label": "irrelevant", "reason": "物体位姿，与人体运动无关。",
+        }], decisions)
+
 
 if __name__ == "__main__":
     unittest.main()

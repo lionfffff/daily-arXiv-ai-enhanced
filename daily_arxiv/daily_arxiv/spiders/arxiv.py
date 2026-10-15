@@ -16,6 +16,7 @@ class ArxivSpider(scrapy.Spider):
         categories = categories.split(",")
         # 保存目标分类列表，用于后续验证
         self.target_categories = set(map(str.strip, categories))
+        self.parsed_listing_urls = set()
         self.start_urls = [
             f"https://arxiv.org/list/{cat}/new" for cat in self.target_categories
         ]  # 起始URL（计算机科学领域的最新论文）
@@ -24,6 +25,8 @@ class ArxivSpider(scrapy.Spider):
     allowed_domains = ["arxiv.org"]  # 允许爬取的域名
 
     def parse(self, response):
+        if not response.css("div[id=dlpage]"):
+            raise ValueError(f"Unexpected arXiv listing page: {response.url}")
         sections = [heading.strip() for heading in response.css("h3::text").getall()]
         self.logger.info("arXiv listing %s (HTTP %s): %s", response.url, response.status, sections)
         # The list navigation marks the first item in each announcement section.
@@ -40,6 +43,8 @@ class ArxivSpider(scrapy.Spider):
                 if section_type:
                     section_starts.append((int(match.group(1)), section_type))
         section_starts.sort()
+        if response.css("dl dt") and not section_starts:
+            raise ValueError(f"Could not identify arXiv announcement sections: {response.url}")
 
         # 遍历每篇论文的详细信息
         for paper in response.css("dl dt"):
@@ -98,3 +103,4 @@ class ArxivSpider(scrapy.Spider):
                     "submission_type": submission_type,
                     "categories": [],
                 }
+        self.parsed_listing_urls.add(response.url)

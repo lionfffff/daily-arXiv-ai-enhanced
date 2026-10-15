@@ -1,6 +1,8 @@
 import unittest
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+
+import arxiv
 
 from daily_arxiv.daily_arxiv.pipelines import DailyArxivPipeline
 
@@ -36,7 +38,7 @@ class PipelineVersionTests(unittest.TestCase):
         self.assertEqual("cs/0601001v3", item["version_id"])
 
     def test_rejects_version_for_different_paper(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(RuntimeError, "missing IDs"):
             self.process("2412.12048", "2412.12877v2")
 
     def test_reuses_api_metadata_across_category_listings(self):
@@ -54,6 +56,43 @@ class PipelineVersionTests(unittest.TestCase):
         self.assertEqual("2412.12048v2", second["version_id"])
         self.assertEqual("new", first["submission_type"])
         self.assertEqual("cross", second["submission_type"])
+
+    def test_batches_unique_ids_and_maps_unordered_results(self):
+        pipeline = DailyArxivPipeline()
+        ids = [f"2610.{number:05d}" for number in range(205)]
+        pipeline.client.results = Mock(side_effect=lambda search: iter(
+            make_paper(f"{paper_id}v2") for paper_id in reversed(search.id_list)
+        ))
+        items = [{"id": paper_id, "submission_type": "replacement"} for paper_id in ids + ids[:20]]
+        enriched = pipeline.enrich_papers(items)
+        self.assertEqual(3, pipeline.client.results.call_count)
+        self.assertEqual([100, 100, 5], [len(call.args[0].id_list) for call in pipeline.client.results.call_args_list])
+        self.assertEqual([item["id"] + "v2" for item in items], [item["version_id"] for item in enriched])
+
+    def test_missing_metadata_fails_instead_of_returning_partial_batch(self):
+        pipeline = DailyArxivPipeline()
+        pipeline.client.results = Mock(return_value=iter([make_paper("2610.00001v2")]))
+        with self.assertRaisesRegex(RuntimeError, "2610.00002"):
+            pipeline.enrich_papers([{"id": "2610.00001"}, {"id": "2610.00002"}])
+
+    @patch("daily_arxiv.daily_arxiv.pipelines.time.sleep")
+    def test_rate_limit_retries_with_backoff(self, sleep):
+        pipeline = DailyArxivPipeline()
+        pipeline.client.results = Mock(side_effect=[
+            arxiv.HTTPError("https://export.arxiv.org/api/query", 0, 429),
+            iter([make_paper("2610.00001v2")]),
+        ])
+        result = pipeline.enrich_papers([{"id": "2610.00001"}])
+        sleep.assert_called_once_with(15)
+        self.assertEqual("2610.00001v2", result[0]["version_id"])
+
+    @patch("daily_arxiv.daily_arxiv.pipelines.time.sleep")
+    def test_persistent_rate_limit_fails_after_bounded_retries(self, sleep):
+        pipeline = DailyArxivPipeline()
+        pipeline.client.results = Mock(side_effect=arxiv.HTTPError("https://export.arxiv.org/api/query", 0, 429))
+        with self.assertRaises(arxiv.HTTPError):
+            pipeline.enrich_papers([{"id": "2610.00001"}])
+        self.assertEqual([15, 30, 60], [call.args[0] for call in sleep.call_args_list])
 
 
 if __name__ == "__main__":

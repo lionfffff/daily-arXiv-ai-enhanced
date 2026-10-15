@@ -80,6 +80,7 @@ def select_papers(
     profile: dict,
     mode: str,
     classifier: Callable[[dict], dict] | None = None,
+    on_decision: Callable[[dict], None] | None = None,
 ) -> tuple[list[dict], Counter]:
     if mode not in MODES:
         raise ValueError(f"Unsupported relevance mode: {mode}")
@@ -87,7 +88,7 @@ def select_papers(
         raise ValueError("Semantic modes require a classifier")
 
     selected = []
-    counts = Counter(total=len(papers))
+    counts = Counter(total=len(papers), outside_keyword_gate=0, candidates=0, relevant=0, maybe=0, irrelevant=0)
     for paper in papers:
         terms = matched_terms(paper, profile["candidate_terms"])
         if mode != "semantic_all" and not terms:
@@ -105,6 +106,14 @@ def select_papers(
             raise ValueError(f"Invalid relevance decision for {paper.get('id', 'unknown')}: {decision}")
 
         counts[label] += 1
+        if on_decision:
+            on_decision({
+                "id": paper.get("version_id", paper.get("id")),
+                "title": paper.get("title", ""),
+                "matched_terms": terms,
+                "label": label,
+                "reason": reason,
+            })
         if label in KEEP_LABELS:
             selected.append({**paper, "relevance": {"label": label, "reason": reason}})
 
@@ -112,11 +121,11 @@ def select_papers(
     return selected, counts
 
 
-def filter_file(path: Path, profile: dict, mode: str, classifier=None) -> Counter:
+def filter_file(path: Path, profile: dict, mode: str, classifier=None, on_decision=None) -> Counter:
     with path.open(encoding="utf-8") as source:
         papers = [json.loads(line) for line in source if line.strip()]
 
-    selected, counts = select_papers(papers, profile, mode, classifier)
+    selected, counts = select_papers(papers, profile, mode, classifier, on_decision)
     descriptor, temp_path = tempfile.mkstemp(prefix=".relevance-", suffix=".jsonl", dir=path.parent)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as target:
@@ -139,8 +148,19 @@ def main() -> None:
     with args.profile.open(encoding="utf-8") as source:
         profile = json.load(source)
     classifier = make_classifier(profile) if args.mode != "keywords" else None
-    counts = filter_file(args.data, profile, args.mode, classifier)
+    counts = filter_file(
+        args.data, profile, args.mode, classifier,
+        on_decision=lambda result: print("Candidate decision: " + json.dumps(result, ensure_ascii=False), flush=True),
+    )
     print(json.dumps({"mode": args.mode, **counts}, ensure_ascii=False))
+    if summary_path := os.environ.get("GITHUB_STEP_SUMMARY"):
+        with open(summary_path, "a", encoding="utf-8") as summary:
+            summary.write(
+                f"筛选模式：`{args.mode}`。去重后 {counts['total']} 篇，"
+                f"进入候选 {counts['candidates']} 篇，未命中关键词 {counts['outside_keyword_gate']} 篇。\n\n"
+                f"保留 {counts['kept']} 篇（相关 {counts['relevant']}，可能相关 {counts['maybe']}）；"
+                f"无关 {counts['irrelevant']} 篇。候选标题、命中词和判定理由见筛选步骤日志。\n\n"
+            )
 
 
 if __name__ == "__main__":
