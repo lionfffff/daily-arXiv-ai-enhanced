@@ -5,7 +5,7 @@ name: arXiv-daily-ai-enhanced
 
 on:
   schedule:
-    - cron: "30 17 * * *"
+    - cron: "30 2 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -57,6 +57,12 @@ jobs:
         if [ ! -f "../data/${today}.jsonl" ]; then
             echo "爬取失败，未生成数据文件 / Crawling failed, no data file generated"
             exit 1
+        fi
+
+        crawled_count=$(wc -l < "../data/${today}.jsonl")
+        echo "crawled_count=$crawled_count" >> "$GITHUB_OUTPUT"
+        if [ "$crawled_count" -eq 0 ]; then
+          echo "Crawler returned 0 papers. Check the Scrapy response status counts and the New submissions sections on arXiv /new." >> "$GITHUB_STEP_SUMMARY"
         fi
         
         echo "crawl_date=$today" >> $GITHUB_OUTPUT
@@ -168,6 +174,8 @@ jobs:
       run: |
         if [ "${{ steps.relevance_check.outputs.has_relevant_content }}" = "true" ]; then
           echo "Relevant papers were summarized and are ready to publish."
+        elif [ "${{ steps.crawl_step.outputs.crawled_count }}" = "0" ]; then
+          echo "No papers were crawled from the arXiv /new pages; downstream steps were skipped."
         elif [ "${{ steps.dedup_check.outputs.has_new_content }}" = "true" ]; then
           echo "No papers matched the research profile today."
         else

@@ -18,12 +18,17 @@ class ArxivSpider(scrapy.Spider):
     allowed_domains = ["arxiv.org"]  # 允许爬取的域名
 
     def parse(self, response):
+        sections = [heading.strip() for heading in response.css("h3::text").getall()]
+        self.logger.info("arXiv listing %s (HTTP %s): %s", response.url, response.status, sections)
         # 提取每篇论文的信息
-        anchors = []
+        replacement_start = None
         for li in response.css("div[id=dlpage] ul li"):
             href = li.css("a::attr(href)").get()
-            if href and "item" in href:
-                anchors.append(int(href.split("item")[-1]))
+            label = li.css("a::text").get(default="").strip().casefold()
+            match = re.fullmatch(r"#item(\d+)", href or "")
+            if label == "replacements" and match:
+                replacement_start = int(match.group(1))
+                break
 
         # 遍历每篇论文的详细信息
         for paper in response.css("dl dt"):
@@ -32,7 +37,7 @@ class ArxivSpider(scrapy.Spider):
                 continue
                 
             paper_id = int(paper_anchor.split("item")[-1])
-            if anchors and paper_id >= anchors[-1]:
+            if replacement_start is not None and paper_id >= replacement_start:
                 continue
 
             # 获取论文ID
