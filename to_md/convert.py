@@ -56,7 +56,7 @@ if __name__ == "__main__":
                     template.format(
                         title=item["title"],
                         authors=",".join(item["authors"]),
-                        summary=item["summary"],
+                        summary=item.get("summary_zh") or item["summary"],
                         url=item['abs'],
                         tldr=ai_data.get('tldr', ''),
                         motivation=ai_data.get('motivation', ''),

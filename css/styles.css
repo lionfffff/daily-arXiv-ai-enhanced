@@ -823,6 +823,7 @@ main {
 
 .paper-modal-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
@@ -839,6 +840,8 @@ main {
 
 .paper-modal-buttons {
   display: flex;
+  flex-wrap: wrap;
+  margin-left: auto;
   gap: 8px;
   align-items: center;
 }
@@ -863,6 +866,24 @@ main {
 .paper-modal-footer .button.icon-button:not(.primary):hover {
   color: var(--primary-color);
   transform: translateY(-1px);
+}
+
+.paper-modal-footer .button.icon-button:disabled {
+  opacity: 0.45;
+  cursor: wait;
+  transform: none;
+}
+
+.pdf-download-status {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pdf-download-status:empty {
+  display: none;
 }
 
 /* Special styling for arXiv logo */

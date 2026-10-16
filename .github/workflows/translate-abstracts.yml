@@ -1,0 +1,50 @@
+name: Translate published abstracts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arxiv-data
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || 'https://api.deepseek.com' }}
+      MODEL_NAME: ${{ vars.MODEL_NAME || 'deepseek-v4-pro' }}
+      CATEGORIES: ${{ vars.CATEGORIES || 'cs.CV,cs.AI,cs.LG' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: data
+          path: published
+      - name: Install dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv sync
+      - name: Translate missing abstracts
+        run: |
+          source .venv/bin/activate
+          python ai/translate_abstracts.py published/data/*_AI_enhanced_*.jsonl
+          cd to_md
+          for file in ../published/data/*_AI_enhanced_Chinese.jsonl; do
+            if [ -f "$file" ]; then
+              python convert.py --data "$file"
+            fi
+          done
+      - name: Publish translated abstracts
+        working-directory: published
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/
+          if ! git diff --staged --quiet; then
+            git commit -m "feat: translate published abstracts into Chinese"
+            git push origin HEAD:data
+          fi

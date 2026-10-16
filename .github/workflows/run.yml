@@ -156,6 +156,13 @@ jobs:
           "data/${today}.jsonl" \
           "data/${today}_AI_enhanced_${LANGUAGE}.jsonl"
 
+    - name: Translate abstracts into Chinese
+      if: steps.relevance_check.outputs.has_relevant_content == 'true'
+      run: |
+        source .venv/bin/activate
+        today=${{ steps.crawl_step.outputs.crawl_date }}
+        python ai/translate_abstracts.py "data/${today}_AI_enhanced_${LANGUAGE}.jsonl"
+
     - name: Convert to Markdown
       if: steps.relevance_check.outputs.has_relevant_content == 'true'
       run: |

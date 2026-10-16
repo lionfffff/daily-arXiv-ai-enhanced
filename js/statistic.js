@@ -746,7 +746,7 @@ function parseJsonlData(jsonlText, date) {
         authors: Array.isArray(paper.authors) ? paper.authors.join(', ') : paper.authors,
         category: allCategories,
         summary: summary,
-        details: paper.summary || '',
+        details: paper.summary_zh || paper.summary || '',
         date: date,
         id: paper.id,
         submissionLabel: submissionLabel ? `${submissionLabel}${version ? ` v${version[1]}` : ''}` : '',
