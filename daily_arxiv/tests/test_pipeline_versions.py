@@ -75,6 +75,31 @@ class PipelineVersionTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "2610.00002"):
             pipeline.enrich_papers([{"id": "2610.00001"}, {"id": "2610.00002"}])
 
+    def test_uses_listing_data_and_only_queries_missing_versions(self):
+        pipeline = DailyArxivPipeline()
+        listing = {
+            "id": "2610.00001", "version_id": "2610.00001v3", "metadata_source": "arxiv_listing",
+            "title": "Human pose", "summary": "Original abstract", "authors": ["Researcher"],
+            "categories": ["cs.CV"], "submission_type": "replacement", "comment": None,
+        }
+        unknown = {**listing, "id": "2610.00002"}
+        unknown.pop("version_id")
+        pipeline.client.results = Mock(return_value=iter([make_paper("2610.00002v4")]))
+        result = pipeline.enrich_papers([listing, unknown, listing])
+        pipeline.client.results.assert_called_once()
+        self.assertEqual(["2610.00002"], pipeline.client.results.call_args.args[0].id_list)
+        self.assertEqual("https://arxiv.org/abs/2610.00001v3", result[0]["abs"])
+        self.assertEqual("Original abstract", result[0]["summary"])
+        self.assertEqual("2610.00002v4", result[1]["version_id"])
+
+    def test_invalid_listing_version_cannot_be_published(self):
+        pipeline = DailyArxivPipeline()
+        with self.assertRaisesRegex(ValueError, "Unexpected listing version"):
+            pipeline.enrich_papers([{
+                "id": "2610.00001", "version_id": "2610.00002v3", "metadata_source": "arxiv_listing",
+                "title": "Paper", "summary": "Abstract", "authors": ["Researcher"], "categories": ["cs.CV"],
+            }])
+
     @patch("daily_arxiv.daily_arxiv.pipelines.time.sleep")
     def test_rate_limit_retries_with_backoff(self, sleep):
         pipeline = DailyArxivPipeline()

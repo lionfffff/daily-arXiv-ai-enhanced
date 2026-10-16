@@ -48,10 +48,25 @@ class DailyArxivPipeline:
             logger.info("Fetched metadata for %s papers in one batch", len(batch))
 
     def enrich_papers(self, items):
-        self.prefetch(item["id"] for item in items)
+        self.prefetch(item["id"] for item in items if not self.has_listing_metadata(item))
         return [self.process_item(dict(item), None) for item in items]
 
+    @staticmethod
+    def has_listing_metadata(item):
+        if item.get("metadata_source") not in {"arxiv_listing", "arxiv_abstract"} or not item.get("version_id"):
+            return False
+        if not all(item.get(key) for key in ("title", "summary", "authors", "categories")):
+            raise ValueError(f"Incomplete listing metadata for {item['id']}")
+        return True
+
     def process_item(self, item: dict, spider):
+        if self.has_listing_metadata(item):
+            version_id = item["version_id"]
+            if not re.fullmatch(rf"{re.escape(item['id'])}v[1-9]\d*", version_id):
+                raise ValueError(f"Unexpected listing version {version_id!r} for {item['id']!r}")
+            item["pdf"] = f"https://arxiv.org/pdf/{version_id}"
+            item["abs"] = f"https://arxiv.org/abs/{version_id}"
+            return item
         paper = self._paper_cache.get(item["id"])
         if paper is None:
             self.prefetch([item["id"]])
@@ -68,4 +83,5 @@ class DailyArxivPipeline:
         item["categories"] = list(paper.categories)
         item["comment"] = paper.comment
         item["summary"] = paper.summary
+        item["metadata_source"] = "arxiv_api"
         return item

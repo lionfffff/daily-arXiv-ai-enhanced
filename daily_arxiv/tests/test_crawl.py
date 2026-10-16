@@ -21,7 +21,10 @@ class CrawlCompletenessTests(unittest.TestCase):
             output.write_text("earlier output\n", encoding="utf-8")
             with (
                 patch("sys.argv", ["crawl", "--output", str(output)]),
-                patch("daily_arxiv.daily_arxiv.crawl.collect_listings", return_value=[{"id": "2610.00001"}]),
+                patch("daily_arxiv.daily_arxiv.crawl.collect_listings", return_value=[{
+                    "id": "2610.00001", "version_id": "2610.00001v2", "metadata_source": "arxiv_listing",
+                    "title": "Paper", "summary": "Abstract", "authors": ["Author"], "categories": ["cs.CV"],
+                }]),
                 patch("daily_arxiv.daily_arxiv.crawl.DailyArxivPipeline.enrich_papers", side_effect=RuntimeError("API failed")),
             ):
                 with self.assertRaisesRegex(RuntimeError, "API failed"):

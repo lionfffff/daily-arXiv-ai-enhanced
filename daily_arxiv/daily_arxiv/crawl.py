@@ -1,4 +1,4 @@
-"""Collect listing IDs, then fetch metadata in batches with strict completeness checks."""
+"""Collect listing metadata and verify missing versions on public abstract pages."""
 
 import argparse
 import json
@@ -47,6 +47,11 @@ def collect_listings():
     if failures:
         raise RuntimeError(f"Could not run arXiv spider: {failures}")
     validate_crawl(crawler.stats.get_stats(), crawler.spider.start_urls, crawler.spider.parsed_listing_urls)
+    if crawler.spider.pending_metadata or len(items) != crawler.spider.expected_entries:
+        raise RuntimeError(
+            f"Incomplete arXiv metadata: collected {len(items)} of {crawler.spider.expected_entries} entries; "
+            f"unresolved IDs: {sorted(crawler.spider.pending_metadata)}"
+        )
     return items
 
 
@@ -68,13 +73,21 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     items = collect_listings()
-    papers = DailyArxivPipeline().enrich_papers(items)
+    pipeline = DailyArxivPipeline()
+    if not all(pipeline.has_listing_metadata(item) for item in items):
+        raise RuntimeError("Incomplete page metadata; refusing to publish unverified versions")
+    papers = pipeline.enrich_papers(items)
     write_papers(args.output, papers)
-    counts = {"listing_entries": len(items), "unique_papers": len({item['id'] for item in items}), "metadata_records": len(papers)}
+    counts = {
+        "listing_entries": len(items),
+        "unique_papers": len({item['id'] for item in items}),
+        "metadata_records": len(papers),
+        "abstract_page_papers": len({item['id'] for item in papers if item['metadata_source'] == 'arxiv_abstract'}),
+    }
     print(json.dumps(counts))
     if summary_path := os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(summary_path, "a", encoding="utf-8") as summary:
-            summary.write(f"抓取完整：{counts['listing_entries']} 条分类记录，{counts['unique_papers']} 篇不同论文；元数据已全部获取。\n\n")
+            summary.write(f"抓取完整：{counts['listing_entries']} 条分类记录，{counts['unique_papers']} 篇不同论文；其中 {counts['abstract_page_papers']} 篇通过摘要页确认版本，其余直接复用列表元数据。\n\n")
 
 
 if __name__ == "__main__":
