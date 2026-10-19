@@ -25,6 +25,7 @@ def build_chat_openai_kwargs(model_name: str, base_url: str, api_key: str) -> di
         "model": model_name,
         "base_url": base_url,
         "api_key": api_key,
+        "temperature": 0,
     }
     hostname = urlparse(base_url).hostname or ""
     if hostname.endswith("volces.com") or hostname in {"api.deepseek.com"}:
@@ -36,3 +37,4 @@ def raise_if_processing_failed(errors: list[str]) -> None:
     """Make a failed AI batch fail the workflow instead of publishing placeholders."""
     if errors:
         raise RuntimeError(f"{len(errors)} paper(s) failed AI enhancement: {errors[0]}")
+
