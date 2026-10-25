@@ -121,13 +121,21 @@ def parse_version_page(response, entry):
             or actual_id != base or selected_versions != [match.group("version")]):
         raise ValueError(f"Cannot verify exact historical version {identity}: {response.url}")
 
-    title = response.css('meta[name="citation_title"]::attr(content)').get() or text_content(response.css("h1.title"), "Title:")
+    # arXiv citation metadata can use LaTeX (e.g. \\lambda) while the listing
+    # and visible heading use Unicode (λ). Accept an exact normalized match
+    # against either title from the same verified version page.
+    page_titles = [value for value in (
+        text_content(response.css("h1.title"), "Title:"),
+        response.css('meta[name="citation_title"]::attr(content)').get(),
+    ) if value]
+    title = next((value for value in page_titles
+                  if normalized_title(value) == normalized_title(decision["title"])), None)
     authors = response.css('meta[name="citation_author"]::attr(content)').getall()
     summary = text_content(response.css("blockquote.abstract"), "Abstract:")
     categories = list(dict.fromkeys(re.findall(r"\(([a-z][a-z.-]*(?:\.[A-Z]{2})?)\)", text_content(response.css(".subjects")))))
-    if not title or not summary or not authors or not categories:
+    if not page_titles or not summary or not authors or not categories:
         raise ValueError(f"Incomplete historical metadata: {identity}")
-    if normalized_title(title) != normalized_title(decision["title"]):
+    if title is None:
         raise ValueError(f"Title differs from saved decision for {identity}; review the manifest before recovery")
 
     return {

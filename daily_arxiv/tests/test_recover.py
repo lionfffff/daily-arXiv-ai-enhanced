@@ -74,6 +74,24 @@ class VersionPageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Title differs"):
             parse_version_page(page(title="Unrelated new title"), entry())
 
+    def test_unicode_heading_matches_when_citation_uses_latex(self):
+        saved = entry()
+        saved["decision"]["title"] = "$λ_0$: Human motion quality"
+        response = page(title=r"$\lambda_0$: Human motion quality")
+        response = response.replace(body=response.body +
+                                    '<h1 class="title"><span>Title:</span>$λ_0$: Human motion quality</h1>'.encode())
+        result = parse_version_page(response, saved)
+        self.assertEqual(result["title"], saved["decision"]["title"])
+        self.assertEqual(result["version_id"], "2610.12345v2")
+
+    def test_latex_citation_can_match_when_visible_heading_uses_unicode(self):
+        saved = entry()
+        saved["decision"]["title"] = r"$\lambda_0$: Human motion quality"
+        response = page(title=saved["decision"]["title"])
+        response = response.replace(body=response.body +
+                                    '<h1 class="title"><span>Title:</span>$λ_0$: Human motion quality</h1>'.encode())
+        self.assertEqual(parse_version_page(response, saved)["title"], saved["decision"]["title"])
+
 
 class RecoveryPlanningTests(unittest.TestCase):
     def test_manifest_requires_selected_version_and_retains_reason(self):
