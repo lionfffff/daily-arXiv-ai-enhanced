@@ -1,0 +1,28 @@
+name: Pipeline checks
+
+on:
+  push:
+    branches: [main]
+    paths: ['ai/**', 'daily_arxiv/**', '.github/workflows/**', 'pyproject.toml', 'uv.lock']
+  pull_request:
+    paths: ['ai/**', 'daily_arxiv/**', '.github/workflows/**', 'pyproject.toml', 'uv.lock']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install locked dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv sync --frozen
+      - name: Test parsing, date boundaries and AI client construction without API calls
+        run: |
+          source .venv/bin/activate
+          python -m unittest discover -s ai/tests -v
+          python -m unittest discover -s daily_arxiv/tests -v

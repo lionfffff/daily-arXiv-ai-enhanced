@@ -27,7 +27,11 @@ jobs:
       - name: Install dependencies
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
-          uv sync
+          uv sync --frozen
+      - name: Validate translation client before paid processing
+        run: |
+          source .venv/bin/activate
+          python -m unittest ai.tests.test_translate_abstracts ai.tests.test_runtime -q
       - name: Translate missing abstracts
         run: |
           source .venv/bin/activate

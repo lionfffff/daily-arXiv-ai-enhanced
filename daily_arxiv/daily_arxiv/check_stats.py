@@ -8,12 +8,13 @@
 - 删除重复论文条目，保留新内容 / Remove duplicate papers, keep new content
 - 根据去重后的结果决定工作流是否继续 / Decide workflow continuation based on deduplication results
 """
+import argparse
 import json
 import sys
 import os
 import re
 import subprocess
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 BASE_ID_PATTERN = re.compile(r"(?:\d{4}\.\d{4,5}|[a-z][a-z.-]*/\d{7})\Z")
 VERSION_SUFFIX_PATTERN = re.compile(r"v[1-9]\d*\Z")
@@ -114,7 +115,17 @@ def load_history_ids(date_str, *, published_only=False):
     except ValueError as exc:
         raise ValueError(f"Invalid history data for {date_str}") from exc
 
-def perform_deduplication():
+def parse_date(value):
+    """Parse the workflow's fixed crawl date, rejecting ambiguous formats."""
+    try:
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("Date must be a valid YYYY-MM-DD value") from exc
+
+
+def perform_deduplication(target_date=None):
     """
     执行多日去重：删除与历史多日重复的论文条目，保留新内容
     Perform deduplication over multiple past days
@@ -127,13 +138,17 @@ def perform_deduplication():
              - "error": 处理错误 / Processing error
     """
 
-    today = datetime.now().strftime("%Y-%m-%d")
+    explicit_date = target_date is not None
+    target_date = target_date or datetime.now().date()
+    today = target_date.isoformat()
     today_file = f"../data/{today}.jsonl"
     history_days = 7  # 向前追溯几天的数据进行对比
 
     if not os.path.exists(today_file):
-        print("今日数据文件不存在 / Today's data file does not exist", file=sys.stderr)
-        return "no_data"
+        print(f"数据文件不存在 / Data file does not exist: {today_file}", file=sys.stderr)
+        # An explicitly requested file should have been produced by the crawler.
+        # Missing it is a workflow error, not a day with zero submissions.
+        return "error" if explicit_date else "no_data"
 
     try:
         today_papers, _ = load_papers_data(today_file)
@@ -146,7 +161,7 @@ def perform_deduplication():
         # Today's local file is the fresh crawl; compare it with the published copy.
         history_ids = load_history_ids(today, published_only=True)
         for i in range(1, history_days + 1):
-            date_str = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+            date_str = (target_date - timedelta(days=i)).isoformat()
             history_ids.update(load_history_ids(date_str))
 
         print(f"历史{history_days}日去重库大小: {len(history_ids)} / History {history_days} days deduplication library size: {len(history_ids)}", file=sys.stderr)
@@ -182,7 +197,7 @@ def perform_deduplication():
         print(f"去重处理失败: {e} / Deduplication processing failed: {e}", file=sys.stderr)
         return "error"
 
-def main():
+def main(argv=None):
     """
     检查去重状态并返回相应的退出码
     Check deduplication status and return corresponding exit code
@@ -193,10 +208,14 @@ def main():
     2: 处理错误 / Processing error
     """
     
+    parser = argparse.ArgumentParser(description="Deduplicate crawled papers against published history")
+    parser.add_argument("--date", type=parse_date, help="Fixed crawl date in YYYY-MM-DD format")
+    args = parser.parse_args(argv)
+
     print("正在执行去重检查... / Performing intelligent deduplication check...", file=sys.stderr)
     
     # 执行去重处理 / Perform deduplication processing
-    dedup_status = perform_deduplication()
+    dedup_status = perform_deduplication(args.date)
     
     if dedup_status == "has_new_content":
         print("✅ 去重完成，发现新内容，继续工作流 / Deduplication completed, new content found, continue workflow", file=sys.stderr)

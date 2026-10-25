@@ -3,12 +3,13 @@ import os
 import subprocess
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
 
 from daily_arxiv.daily_arxiv.check_stats import (
     load_history_ids,
+    main,
     paper_version_id,
     perform_deduplication,
 )
@@ -48,13 +49,14 @@ class HistoryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Invalid version_id"):
             paper_version_id({"id": "2401.00001", "version_id": "2401.00002v2"})
 
-    def run_dedup(self, papers, history_ids):
+    def run_dedup(self, papers, history_ids, target_date=None):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "data").mkdir()
             working_directory = root / "daily_arxiv"
             working_directory.mkdir()
-            today_file = root / "data" / f"{datetime.now():%Y-%m-%d}.jsonl"
+            crawl_date = target_date or datetime.now().date()
+            today_file = root / "data" / f"{crawl_date.isoformat()}.jsonl"
             today_file.write_text(
                 "".join(json.dumps(paper) + "\n" for paper in papers), encoding="utf-8"
             )
@@ -66,7 +68,7 @@ class HistoryTests(unittest.TestCase):
                     else lambda _date, published_only=False: history_ids
                 )
                 with patch("daily_arxiv.daily_arxiv.check_stats.load_history_ids", side_effect=history_lookup):
-                    status = perform_deduplication()
+                    status = perform_deduplication(target_date)
             finally:
                 os.chdir(original_directory)
             published = (
@@ -101,6 +103,44 @@ class HistoryTests(unittest.TestCase):
         status, published = self.run_dedup(v3, published_today)
         self.assertEqual("has_new_content", status)
         self.assertEqual(v3, published)
+
+    def test_crawl_date_and_history_stay_fixed_when_check_runs_after_midnight(self):
+        papers = [
+            {"id": "2610.00001", "version_id": "2610.00001v1"},
+            {"id": "2610.00002", "version_id": "2610.00002v1"},
+        ]
+        history_dates = []
+
+        def history_lookup(history_date, published_only=False):
+            history_dates.append((history_date, published_only))
+            # The earliest day must still be included even after midnight.
+            return {"2610.00001v1"} if history_date == "2026-10-17" else set()
+
+        with patch("daily_arxiv.daily_arxiv.check_stats.datetime") as clock:
+            clock.now.return_value = datetime(2026, 10, 25, 0, 0, 20)
+            status, published = self.run_dedup(
+                papers, history_lookup, target_date=date(2026, 10, 24)
+            )
+        self.assertEqual("has_new_content", status)
+        self.assertEqual([papers[1]], published)
+        self.assertEqual(
+            [("2026-10-24", True)]
+            + [(f"2026-10-{day}", False) for day in range(23, 16, -1)],
+            history_dates,
+        )
+
+    @patch("daily_arxiv.daily_arxiv.check_stats.os.path.exists", return_value=False)
+    def test_explicit_missing_crawl_file_fails_cli_instead_of_reporting_empty(self, _exists):
+        with self.assertRaises(SystemExit) as exit_result:
+            main(["--date", "2026-10-24"])
+        self.assertEqual(2, exit_result.exception.code)
+        self.assertEqual("no_data", perform_deduplication())
+
+    def test_cli_rejects_invalid_or_ambiguous_dates(self):
+        for value in ("2026-10-32", "2026-1-2", "20261024"):
+            with self.subTest(value=value), self.assertRaises(SystemExit) as exit_result:
+                main(["--date", value])
+            self.assertEqual(2, exit_result.exception.code)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,15 @@
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from ai.translate_abstracts import translate_files
+from langchain_core.messages import AIMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_openai import ChatOpenAI
+
+from ai.translate_abstracts import build_translator, translate_files
 
 
 class TranslateAbstractsTests(unittest.TestCase):
@@ -16,6 +22,36 @@ class TranslateAbstractsTests(unittest.TestCase):
         path = self.root / name
         path.write_text("".join(json.dumps(p) + "\n" for p in papers), encoding="utf-8")
         return path
+
+    def test_real_translator_uses_shared_settings_and_parses_chinese_response(self):
+        """Exercise client construction too: duplicate kwargs previously broke every run."""
+        result = ChatResult(generations=[ChatGeneration(message=AIMessage(
+            content="",
+            tool_calls=[{
+                "name": "ChineseAbstract",
+                "args": {"abstract_zh": "姿态误差降低了 20%。"},
+                "id": "translation-test",
+            }],
+        ))])
+        with (
+            patch.dict(os.environ, {
+                "OPENAI_API_KEY": "test-key-no-network",
+                "OPENAI_BASE_URL": "https://api.deepseek.com",
+                "MODEL_NAME": "deepseek-v4-pro",
+            }),
+            patch.object(ChatOpenAI, "_generate", autospec=True, return_value=result) as generate,
+        ):
+            translate = build_translator()
+            translated = translate({"title": "Human pose", "summary": "Pose error fell by 20%."})
+
+        self.assertEqual(translated, "姿态误差降低了 20%。")
+        generate.assert_called_once()
+        client, messages = generate.call_args.args[:2]
+        self.assertEqual(client.temperature, 0)
+        self.assertEqual(client.request_timeout, 120)
+        self.assertEqual(client.max_retries, 2)
+        self.assertIn("Human pose", messages[-1].content)
+        self.assertIn("Pose error fell by 20%.", messages[-1].content)
 
     def test_preserves_original_and_ai_fields_and_reuses_existing_translation(self):
         paper = {"id": "1234.56789", "version_id": "1234.56789v2", "summary": "Pose error fell by 20%.", "AI": {"tldr": "已有简述"}}

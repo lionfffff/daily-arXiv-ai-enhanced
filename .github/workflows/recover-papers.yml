@@ -1,0 +1,70 @@
+name: Recover missed papers
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest:
+        description: Repository path to the reviewed recovery manifest
+        required: true
+        default: recovery/2026-10-20-24.json
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arxiv-data
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || 'https://api.deepseek.com' }}
+      TOKEN_GITHUB: ${{ secrets.TOKEN_GITHUB }}
+      LANGUAGE: Chinese
+      CATEGORIES: ${{ vars.CATEGORIES || 'cs.CV,cs.AI,cs.LG' }}
+      MODEL_NAME: ${{ vars.MODEL_NAME || 'deepseek-v4-pro' }}
+      RECOVERY_MANIFEST: ${{ inputs.manifest }}
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: data
+          path: published
+      - name: Install dependencies
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv sync --frozen
+      - name: Validate AI schemas and processing before recovery
+        run: |
+          source .venv/bin/activate
+          python -m unittest discover -s ai/tests -q
+      - name: Recover exact versions and prepare complete reports
+        run: |
+          source .venv/bin/activate
+          python -m daily_arxiv.daily_arxiv.recover \
+            --manifest "$RECOVERY_MANIFEST" --published published --output recovery-output
+      - name: Preserve recovery progress and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-${{ github.run_id }}
+          path: recovery-output/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Publish recovered data
+        working-directory: published
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ assets/file-list.txt
+          if git diff --staged --quiet; then
+            echo "Every requested paper version was already published."
+          else
+            git commit -m "recover: complete missed arXiv paper reports"
+            git push origin HEAD:data
+          fi

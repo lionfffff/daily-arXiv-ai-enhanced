@@ -38,7 +38,6 @@ def build_translator():
             base_url=os.environ.get("OPENAI_BASE_URL", "https://api.deepseek.com"),
             api_key=os.environ.get("OPENAI_API_KEY", ""),
         ),
-        temperature=0,
         timeout=120,
         max_retries=2,
     ).with_structured_output(ChineseAbstract, method="function_calling")

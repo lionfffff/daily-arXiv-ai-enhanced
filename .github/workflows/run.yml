@@ -5,8 +5,10 @@ name: arXiv-daily-ai-enhanced
 
 on:
   schedule:
-    - cron: "0 6 * * *"
-      timezone: "Asia/Shanghai"
+    # arXiv announces Sun–Thu at 20:00 US Eastern; allow 5 minutes to update.
+    # Beijing: Mon–Fri 08:05 during US DST, 09:05 during standard time.
+    - cron: "5 20 * * 0-4"
+      timezone: "America/New_York"
   workflow_dispatch:
 
 permissions:
@@ -20,6 +22,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL || 'https://api.deepseek.com' }}
@@ -34,13 +37,19 @@ jobs:
     - name: Install dependencies
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
-        uv sync
+        uv sync --frozen
+
+    - name: Validate AI client configuration before paid processing
+      run: |
+        source .venv/bin/activate
+        python -m unittest discover -s ai/tests -q
         
     - name: Crawl arXiv papers
       id: crawl_step
       run: |
         source .venv/bin/activate
-        today=$(date -u "+%Y-%m-%d")
+        today=$(TZ=Asia/Shanghai date "+%Y-%m-%d")
+        echo "crawl_date=$today" >> "$GITHUB_OUTPUT"
         echo "开始爬取 $today 的arXiv论文... / Starting to crawl $today arXiv papers..."
         
         # 检查今日文件是否已存在，如存在则删除 / Check if today's file exists, delete if found
@@ -72,6 +81,11 @@ jobs:
         
         echo "crawl_date=$today" >> $GITHUB_OUTPUT
         echo "爬取完成 / Crawling completed"
+
+    - name: Preserve original crawl for recovery
+      run: |
+        mkdir -p artifacts/raw
+        cp "data/${{ steps.crawl_step.outputs.crawl_date }}.jsonl" artifacts/raw/
         
     - name: Check for duplicates
       id: dedup_check
@@ -85,7 +99,7 @@ jobs:
         cd daily_arxiv
         # 执行去重检查脚本 / Execute intelligent deduplication check script
         set +e  # 暂时允许命令失败 / Temporarily allow command failure
-        python daily_arxiv/check_stats.py
+        python daily_arxiv/check_stats.py --date "${{ steps.crawl_step.outputs.crawl_date }}"
         
         # 获取退出码 / Get exit code
         dedup_exit_code=$?
@@ -118,10 +132,11 @@ jobs:
     - name: Filter papers for sports research
       id: relevance_check
       if: steps.dedup_check.outputs.has_new_content == 'true'
+      shell: bash
       run: |
         source .venv/bin/activate
         today=${{ steps.crawl_step.outputs.crawl_date }}
-        python -m ai.relevance_filter --data "data/${today}.jsonl"
+        python -m ai.relevance_filter --data "data/${today}.jsonl" | tee artifacts/relevance.log
         if [ -s "data/${today}.jsonl" ]; then
           echo "has_relevant_content=true" >> "$GITHUB_OUTPUT"
         else
@@ -191,18 +206,18 @@ jobs:
         fi
         echo "Markdown转换完成 / Markdown conversion completed"
         
-    - name: Summary
-      run: |
-        if [ "${{ steps.relevance_check.outputs.has_relevant_content }}" = "true" ]; then
-          echo "Relevant papers were summarized and are ready to publish."
-        elif [ "${{ steps.crawl_step.outputs.crawled_count }}" = "0" ]; then
-          echo "No papers were crawled from the arXiv /new pages; downstream steps were skipped."
-        elif [ "${{ steps.dedup_check.outputs.has_new_content }}" = "true" ]; then
-          echo "No papers matched the research profile today."
-        else
-          echo "No new papers after deduplication."
-        fi
-        
+    - name: Save crawl and processing results for recovery
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: recovery-data-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          artifacts/
+          data/*.jsonl
+          data/*.md
+        if-no-files-found: ignore
+        retention-days: 30
+
     - name: Prepare data files for data branch
       if: steps.relevance_check.outputs.has_relevant_content == 'true'
       run: |
@@ -294,3 +309,21 @@ jobs:
             fi
           fi
         done
+
+    - name: Summary
+      if: always()
+      run: |
+        if [ "${{ job.status }}" = "failure" ]; then
+          echo "本次处理失败，未发布完整结果。请查看红色步骤和 recovery-data Artifact 中保存的中间结果。" >> "$GITHUB_STEP_SUMMARY"
+        elif [ "${{ job.status }}" = "cancelled" ]; then
+          echo "本次运行已取消，请检查已完成的步骤。" >> "$GITHUB_STEP_SUMMARY"
+        elif [ "${{ steps.relevance_check.outputs.has_relevant_content }}" = "true" ]; then
+          echo "论文、中文摘要和 AI 总结已发布至 data 分支。" >> "$GITHUB_STEP_SUMMARY"
+        elif [ "${{ steps.crawl_step.outputs.crawled_count }}" = "0" ]; then
+          echo "arXiv 列表返回 0 篇论文，未执行后续处理。" >> "$GITHUB_STEP_SUMMARY"
+        elif [ "${{ steps.dedup_check.outputs.has_new_content }}" = "true" ]; then
+          echo "抓取完成，本次没有匹配研究方向的论文。" >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "抓取完成，去重后没有新增论文版本。" >> "$GITHUB_STEP_SUMMARY"
+        fi
+        echo "抓取日期：${{ steps.crawl_step.outputs.crawl_date }}；抓取记录数：${{ steps.crawl_step.outputs.crawled_count }}。" >> "$GITHUB_STEP_SUMMARY"

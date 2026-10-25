@@ -1,0 +1,516 @@
+[
+  {
+    "date": "2026-10-24",
+    "run_id": 40043993570,
+    "papers": [
+      {
+        "id": "2610.30160v1",
+        "title": "V-JEPA 2 Meets AQA: Phase-Based Scoring and Reference-Based Feedback for Mountain Biking",
+        "matched_terms": [
+          "action quality",
+          "aqa",
+          "corrective feedback"
+        ],
+        "label": "relevant",
+        "reason": "该论文研究山地自行车动作质量评估（AQA）与基于参考的纠正反馈，直接契合运动动作质量评估与可操作教练反馈的研究方向。"
+      },
+      {
+        "id": "2610.30500v1",
+        "title": "PhysibleMDM: Enforcing Inference-Time Physical Feasibility Constraints on Motion Diffusion Models via Noise Optimization",
+        "matched_terms": [
+          "human motion",
+          "SMPL"
+        ],
+        "label": "maybe",
+        "reason": "该方法针对人体运动扩散模型施加物理可行性约束（地面穿透、自碰撞、滑移等），虽非直接的动作质量评估，但可迁移用于生成符合物理约束的运动数据或辅助运动反馈。"
+      },
+      {
+        "id": "2511.02845v4",
+        "title": "Deep Learning-Enhanced Real-Time Wi-Fi Sensing Through Single Transceiver Pair",
+        "matched_terms": [
+          "pose estimation",
+          "human pose"
+        ],
+        "label": "maybe",
+        "reason": "该工作利用Wi-Fi信号进行人体姿态估计，属于可迁移到运动数据采集的人体运动感知方法，但非视觉且未直接涉及运动评估或教练反馈。"
+      },
+      {
+        "id": "2606.23061v2",
+        "title": "MotionHalluc: Diagnosing Kinematic Hallucinations in Fine-Grained Motion Reasoning",
+        "matched_terms": [
+          "corrective feedback"
+        ],
+        "label": "relevant",
+        "reason": "该工作针对跨视频动作对比生成纠正性反馈并诊断运动幻觉，与动作质量评估和可执行教练反馈高度相关。"
+      },
+      {
+        "id": "2610.00451v3",
+        "title": "PACT: End-to-End Learning of Human Pose, Contacts, and Forces from Video",
+        "matched_terms": [
+          "human pose",
+          "human motion"
+        ],
+        "label": "maybe",
+        "reason": "该工作从视频端到端估计人体姿态、接触与接触力，涉及全身姿态重建和物理交互，虽非直接运动质量评估，但可迁移到运动生物力学与动作分析。"
+      },
+      {
+        "id": "2610.30519v1",
+        "title": "Unified Trajectory and 3D Pose Forecasting for Multi-Agent Sports Analysis",
+        "matched_terms": [
+          "3d pose",
+          "human motion",
+          "sports"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦多人运动场景下的轨迹与3D姿态联合预测，属于可迁移到体育动作理解与运动数据建模的人体运动预测方法，但核心是预测而非动作质量评估或教练反馈。"
+      },
+      {
+        "id": "2603.18739v5",
+        "title": "EdgeCrafter: Compact ViTs for Edge Dense Prediction via Task-Specialized Distillation",
+        "matched_terms": [
+          "pose estimation",
+          "human pose"
+        ],
+        "label": "maybe",
+        "reason": "该工作提出面向边缘设备的紧凑ViT框架并包含人体姿态估计模块，虽非运动专项但可迁移到体育场景的轻量级姿态估计。"
+      },
+      {
+        "id": "2610.31160v1",
+        "title": "Towards Field-Deployable Wearable IMU Systems for Occupational Activity Recognition",
+        "matched_terms": [
+          "human activity",
+          "IMU",
+          "inertial",
+          "wearable"
+        ],
+        "label": "maybe",
+        "reason": "该研究聚焦可穿戴IMU的人体活动识别与个性化校准，虽面向建筑工人而非运动场景，但其传感器配置、数据增强和个体差异分析方法可迁移到运动动作识别与数据采集。"
+      }
+    ]
+  },
+  {
+    "date": "2026-10-23",
+    "run_id": 39877752872,
+    "papers": [
+      {
+        "id": "2610.30044v1",
+        "title": "SP-HLM: Sparse-Pose-Driven Motion Generation and Whole-Body Control for Humanoid Loco-Manipulation",
+        "matched_terms": [
+          "whole body",
+          "whole-body"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦人形机器人全身运动生成与控制，虽非运动评估或教练反馈，但其稀疏姿态驱动与全身运动生成方法可能迁移到体育动作建模与数据采集。"
+      },
+      {
+        "id": "2610.28985v1",
+        "title": "MedBOE: Optimization-Based Estimation of Complete Patient Body Models from Whole-Body Medical Imaging",
+        "matched_terms": [
+          "SMPL",
+          "whole body",
+          "whole-body"
+        ],
+        "label": "maybe",
+        "reason": "该工作利用SMPL参数化人体网格从医学影像重建完整患者体表模型，属于人体网格恢复/建模方法，可能迁移到运动数据采集与建模，但本身面向医学影像而非运动评估。"
+      },
+      {
+        "id": "2610.29176v1",
+        "title": "Multi-Scale Latent Temporal Compression Attention and Video-Text Cross Attention Fusion for Video Action Detection",
+        "matched_terms": [
+          "video action",
+          "action detection"
+        ],
+        "label": "maybe",
+        "reason": "该文提出视频时序建模与视频-文本跨注意力融合方法用于通用视频动作检测，虽非运动专项，但时序压缩与多模态融合技术可能迁移到骨骼动作理解与动作质量评估。"
+      },
+      {
+        "id": "2610.29244v1",
+        "title": "Failure Modes of Vision-Language Models for Human Activity Understanding in Thermal HRI",
+        "matched_terms": [
+          "human activity",
+          "action recognition",
+          "fine grained action"
+        ],
+        "label": "maybe",
+        "reason": "该工作研究热成像下的人体活动理解与细粒度动作识别（咳嗽、打喷嚏、打哈欠等），虽非运动/体育场景，但其细粒度动作识别与错误分析对全身动作理解有潜在迁移价值。"
+      },
+      {
+        "id": "2610.28771v1",
+        "title": "Motion Equivariant Convolutional LSTM: When Motion Becomes a Gauge Symmetry",
+        "matched_terms": [
+          "action recognition"
+        ],
+        "label": "maybe",
+        "reason": "该方法提出运动等变卷积LSTM用于视频序列建模，并在动作识别（含相机抖动）上验证，属于可迁移到骨架/运动理解的一般视频序列方法，但非直接针对体育或人体姿态评估。"
+      },
+      {
+        "id": "2509.24980v4",
+        "title": "SDPose: Exploiting Diffusion Priors for Out-of-Domain and Robust Pose Estimation",
+        "matched_terms": [
+          "pose estimation",
+          "human pose"
+        ],
+        "label": "maybe",
+        "reason": "该工作提出利用扩散先验提升人体姿态估计的跨域鲁棒性，属于可迁移的2D全身姿态估计新方法，但未直接涉及体育或动作质量评估场景。"
+      },
+      {
+        "id": "2609.35407v2",
+        "title": "BiMoGen: Bidirectional Motion-Text Generation via Unified Masked Discrete Diffusion",
+        "matched_terms": [
+          "human motion"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦文本-动作双向生成（text-to-motion与motion captioning），属于人体运动建模，虽非直接的动作质量评估或教练反馈，但其运动-文本对应建模方法可能迁移到可解释的动作描述与指导。"
+      },
+      {
+        "id": "2610.18950v2",
+        "title": "$λ_0$: Scaling Open-World Egocentric Human Data for Humanoid Loco-Manipulation",
+        "matched_terms": [
+          "locomotion",
+          "whole body",
+          "whole-body"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦人形机器人全身运动数据采集与运动迁移，涉及全身人体运动建模和动作数据，虽非直接体育场景但方法可能迁移到运动数据采集与动作理解。"
+      }
+    ]
+  },
+  {
+    "date": "2026-10-22",
+    "run_id": 39699592236,
+    "papers": [
+      {
+        "id": "2610.27725v1",
+        "title": "World2HOSI: A Multi-Expert Harness for Long-Horizon Human-Object-Scene Interaction Generation",
+        "matched_terms": [
+          "human motion"
+        ],
+        "label": "maybe",
+        "reason": "该工作生成长期人-物-场景交互数据并确保人体运动物理合理性，其人体运动生成与物理约束方法可能迁移到运动反馈或数据构建，但非直接面向运动评估或教练反馈。"
+      },
+      {
+        "id": "2610.27774v1",
+        "title": "Radar-Based 3D Human Pose Estimation via Motion-Aware Pose Initialization and Observation-Guided Refinement",
+        "matched_terms": [
+          "pose estimation",
+          "human pose",
+          "3d pose",
+          "human movement",
+          "3d human"
+        ],
+        "label": "maybe",
+        "reason": "基于毫米波雷达的3D全身姿态估计方法可迁移到运动场景的数据采集与姿态估计，但当前应用场景为室内活动监测而非运动教学。"
+      },
+      {
+        "id": "2610.28081v1",
+        "title": "PULSE: Personalized Opportunistic Learning for Wearable Devices",
+        "matched_terms": [
+          "human activity",
+          "wearable"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦可穿戴设备上的人类活动识别等个性化学习，虽非直接运动姿态评估，但其机会式协作学习框架可能迁移到运动数据采集与个性化模型训练。"
+      },
+      {
+        "id": "2610.28523v1",
+        "title": "VLM-Guided Contact Retargeting and Generative Partner Modeling for Humanoid-Human Interaction",
+        "matched_terms": [
+          "pose estimation",
+          "human motion",
+          "motion capture"
+        ],
+        "label": "maybe",
+        "reason": "涉及人形机器人与人交互中的姿态估计、遮挡下的运动建模与接触重定向，虽非直接体育场景，但其人体运动感知与生成式状态建模方法可能迁移到体育动作分析与教练反馈。"
+      },
+      {
+        "id": "2610.28632v1",
+        "title": "Joints, Camera, Action! Co-Generating 3D Motion and Video for Arbitrary Rigs",
+        "matched_terms": [
+          "2d pose",
+          "human skeleton"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦于任意骨骼绑定（含人体）的3D运动与视频联合生成，虽非直接的动作质量评估或教练反馈，但其3D运动生成与视频-运动互转能力可能迁移到运动数据采集与反馈场景。"
+      },
+      {
+        "id": "2610.27066v1",
+        "title": "BUMP: Body-driven Unified Multi-object Physics for HOI Synthesis",
+        "matched_terms": [
+          "human motion"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦文本驱动的人-物交互运动生成与物理仿真，虽非运动评估或教练反馈，但其全身人体运动生成与物理因果建模方法可能迁移到运动数据合成与反馈场景。"
+      },
+      {
+        "id": "2610.25649v2",
+        "title": "InteractAgent: Agentic Human Motion Interaction with Memory-Augmented Reflection",
+        "matched_terms": [
+          "human motion"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦人-场景交互的运动生成与闭环规划，虽非直接的运动评估或教练反馈，但其人类运动生成与反思机制可能迁移到运动反馈场景。"
+      }
+    ]
+  },
+  {
+    "date": "2026-10-21",
+    "run_id": 39520895670,
+    "papers": [
+      {
+        "id": "2610.25949v1",
+        "title": "OrderGPT: Generation Order as a Learnable Modeling Choice",
+        "matched_terms": [
+          "human pose"
+        ],
+        "label": "maybe",
+        "reason": "该方法在人体姿态上学习解剖学组织的因子分解，属于可迁移到全身姿态建模的生成顺序技术，但核心是生成建模而非运动评估或教练反馈。"
+      },
+      {
+        "id": "2610.26185v1",
+        "title": "MoveBench: A Rubric-Based Benchmark for Evaluating Large Language Models in Sports and Health Coaching",
+        "matched_terms": [
+          "sports",
+          "exercise",
+          "fitness"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦LLM在运动与健康指导中的评估基准，涉及安全性与可执行指导质量，与可解释/可指导的运动反馈方向相关，但核心是文本LLM而非视觉人体运动分析。"
+      },
+      {
+        "id": "2610.23941v1",
+        "title": "A Group-Aware Comparative Study of Classical Machine Learning and Deep Learning Methods for Sensor-Based Human Activity Recognition",
+        "matched_terms": [
+          "human activity",
+          "inertial",
+          "wearable"
+        ],
+        "label": "maybe",
+        "reason": "该研究基于惯性传感器（IMU）的人体活动识别，虽非视觉姿态估计，但IMU运动感知与分组评估方法可迁移到运动数据采集与动作理解。"
+      },
+      {
+        "id": "2610.23980v1",
+        "title": "SituHOI: Scalable Capture of Scene-Situated Full-Body Human-Object Interaction",
+        "matched_terms": [
+          "human mesh",
+          "whole body",
+          "whole-body",
+          "motion prediction"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦场景化全身人体-物体交互的数据集构建与运动预测，包含人体网格恢复和全身运动建模，方法上可迁移到体育动作数据采集与运动预测，但非直接针对体育或动作质量评估。"
+      },
+      {
+        "id": "2610.25288v1",
+        "title": "Vision as Proprioception: Estimating Humanoid Robot Pose from Video",
+        "matched_terms": [
+          "human pose",
+          "human motion",
+          "kinematics"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦人形机器人全身姿态估计，虽非人类运动，但其结合预训练人体姿态特征与运动学、跨实施例泛化的方法可能迁移到体育人体姿态估计与动作理解。"
+      },
+      {
+        "id": "2610.25482v1",
+        "title": "PRIMA: Pose Refined Inductive Motion Adapter for Zero Shot Social Bodily Behavior Recognition",
+        "matched_terms": [
+          "human pose"
+        ],
+        "label": "maybe",
+        "reason": "该方法利用人体姿态作为监督信号增强视觉语言模型对细微身体行为的识别能力，虽非直接面向体育场景，但其姿态引导的全身动作理解与零样本泛化思路可迁移至体育动作识别与评估。"
+      },
+      {
+        "id": "2609.22691v3",
+        "title": "Generative Embodied Multiple Behavior Control Systems for Human-like Agents",
+        "matched_terms": [
+          "3d human"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦生成式具身智能体的人类行为控制与文本到3D人体运动生成，虽非直接的运动评估或教练反馈，但其人体运动生成与行为建模方法可能迁移到运动反馈与数据生成场景。"
+      },
+      {
+        "id": "2610.03873v2",
+        "title": "Streaming Multi-Track Timeline Control for 3D Human Motion Generation",
+        "matched_terms": [
+          "human motion",
+          "3d human"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦3D人体运动生成中的流式多轨时间线控制，虽非直接的动作质量评估，但其身体部位级时序协调与运动生成方法可能迁移到运动反馈或教练场景。"
+      },
+      {
+        "id": "2610.17856v3",
+        "title": "MMTA: Benchmarking Multimodal Temporal Analysis with Time Series, Text, and Vision",
+        "matched_terms": [
+          "human action"
+        ],
+        "label": "maybe",
+        "reason": "该基准包含人类动作领域的时间序列-视频-文本多模态分析，涉及视频动作理解与时间序列建模，可能对运动动作分析有迁移价值，但并非直接针对体育或姿态估计。"
+      },
+      {
+        "id": "2610.23982v1",
+        "title": "Time-JEPA: Grounding Video World Models with Physical Time Series",
+        "matched_terms": [
+          "human motion"
+        ],
+        "label": "maybe",
+        "reason": "该方法用物理时间序列监督视频世界模型并包含人体运动域，可提升运动状态预测与运动学重建，可能迁移到运动姿态估计与动作理解，但并非直接针对体育动作评估或教练反馈。"
+      },
+      {
+        "id": "2610.24286v1",
+        "title": "ULIFLOW: Unified Latent Human-Object Interaction Flow",
+        "matched_terms": [
+          "skeleton based",
+          "human motion",
+          "kinematics",
+          "3d human"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦人-物交互运动生成，虽非直接运动评估，但其统一潜在空间建模人体运动与交互几何的方法可能迁移到运动反馈与动作理解。"
+      },
+      {
+        "id": "2610.24522v1",
+        "title": "MOMO: Human Motion from Moving Sounds",
+        "matched_terms": [
+          "human motion",
+          "motion capture",
+          "3d human"
+        ],
+        "label": "maybe",
+        "reason": "该工作属于音频驱动的全身人体运动生成，虽非运动评估或体育场景，但其3D人体运动生成与空间感知方法可能迁移到运动反馈或数据采集。"
+      },
+      {
+        "id": "2610.24646v1",
+        "title": "Modeling Uncertainty Propagation in 3D Morphable Models",
+        "matched_terms": [
+          "human mesh"
+        ],
+        "label": "maybe",
+        "reason": "该工作研究3D人体网格恢复中的不确定性建模，属于可迁移到运动数据采集与姿态估计的人体网格恢复方法，但本身不直接涉及运动评估或教练反馈。"
+      },
+      {
+        "id": "2610.24841v1",
+        "title": "PCHMR: Empowering and Benchmarking Human Mesh Recovery in Privacy-Constrained Real-World Settings",
+        "matched_terms": [
+          "human mesh"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦隐私约束下的人体网格恢复（HMR）联邦学习与个性化微调，属于可迁移到运动数据采集的人体运动建模方法，但未直接涉及体育或动作质量评估。"
+      },
+      {
+        "id": "2610.26213v1",
+        "title": "ExMR: Extremity Motion Refinement for Monocular Human Motion Capture",
+        "matched_terms": [
+          "human motion",
+          "motion capture",
+          "whole body",
+          "whole-body"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦单目视频的全身3D人体运动重建（含手、脚末端细化），属于可迁移到运动数据采集的人体运动建模方法，但非直接面向体育动作评估或教练反馈。"
+      },
+      {
+        "id": "2610.26491v1",
+        "title": "PDNet: Exploring Pruning and Distillation for Real-Time Worker Activity Recognition in Industrial Assembly",
+        "matched_terms": [
+          "human activity"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦工业装配场景的细粒度人体活动识别，虽非运动场景，但其3D-CNN剪枝与蒸馏方法可迁移到资源受限的运动动作识别任务。"
+      },
+      {
+        "id": "2610.26625v1",
+        "title": "EgoXperience: Learning World-Grounded Egocentric Representations from Human Experience",
+        "matched_terms": [
+          "human activity",
+          "locomotion"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦第一人称视频中手-物交互与场景的联合重建，涉及手部姿态恢复，但非全身运动且不直接面向体育动作评估，仅手部姿态估计部分可能迁移。"
+      },
+      {
+        "id": "2610.26751v1",
+        "title": "Beyond Omni: A Unified MLLM for Embodied Sensory Understanding",
+        "matched_terms": [
+          "IMU"
+        ],
+        "label": "maybe",
+        "reason": "该工作统一处理IMU、运动等多种具身传感模态，其中IMU和运动理解与人体的运动捕捉及步态分析存在潜在迁移价值，但并非直接针对体育动作评估或教练反馈。"
+      },
+      {
+        "id": "2610.25649v1",
+        "title": "InteractAgent: Agentic Human Motion Interaction with Memory-Augmented Reflection",
+        "matched_terms": [
+          "human motion"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦人-场景交互的运动生成与闭环规划，虽非运动评估或教练反馈，但其人类运动生成与反思机制可能迁移到运动反馈场景。"
+      },
+      {
+        "id": "2510.10682v3",
+        "title": "Action-Dynamics Modeling and Cross-Temporal Interaction for Online Action Understanding",
+        "matched_terms": [
+          "action understanding",
+          "action detection"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦在线动作检测与预测的通用时序建模方法，虽非运动/体育场景，但其动作动态建模与跨时序交互技术可能迁移到体育动作理解。"
+      },
+      {
+        "id": "2603.03279v3",
+        "title": "ULTRA: Unified Multimodal Control for Autonomous Humanoid Whole-Body Loco-Manipulation",
+        "matched_terms": [
+          "motion capture",
+          "whole body",
+          "whole-body"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦人形机器人全身运动控制与运动重定向，虽非直接面向体育教学，但其全身运动建模与运动捕捉重定向方法可能迁移到体育动作数据采集与建模。"
+      },
+      {
+        "id": "2606.28449v2",
+        "title": "Establishing the Minimal Clinically Important Difference (MCID) for Smartphone-Derived Gait Measures in Multiple Sclerosis",
+        "matched_terms": [
+          "gait"
+        ],
+        "label": "maybe",
+        "reason": "该研究基于智能手机建立步态指标的最小临床重要差异（MCID），涉及步态分析与临床阈值设定，方法可迁移到跑步步态分析，但针对多发性硬化症患者而非运动场景。"
+      },
+      {
+        "id": "2610.24829v1",
+        "title": "Recurrent Temporal Restricted Boltzmann Machines as Unsupervised Encoders for Biomechanical Movement Sequences",
+        "matched_terms": [
+          "gait"
+        ],
+        "label": "maybe",
+        "reason": "该文针对生物力学运动序列（含步态数据）的无监督表示学习，虽非直接的动作质量评估或教练反馈，但其时序编码方法可能迁移到运动数据分析。"
+      },
+      {
+        "id": "2502.09626v3",
+        "title": "Evidence for Phenotype-Driven Disparities in Freezing of Gait Detection and Approaches to Bias Mitigation",
+        "matched_terms": [
+          "human activity",
+          "gait",
+          "wearable"
+        ],
+        "label": "maybe",
+        "reason": "该研究聚焦帕金森冻结步态的可穿戴检测与公平性，属于步态分析/运动传感范畴，虽非运动教学场景，但其步态检测与偏差缓解方法可能迁移到跑步步态分析。"
+      }
+    ]
+  },
+  {
+    "date": "2026-10-20",
+    "run_id": 39350349375,
+    "papers": [
+      {
+        "id": "2610.22895v1",
+        "title": "HAPACT: A Benchmark For Human-Centric Physical Impact Localization in Movies",
+        "matched_terms": [
+          "SMPL"
+        ],
+        "label": "maybe",
+        "reason": "该工作聚焦人体物理冲击事件的时空定位，使用SMPL-X人体网格和视频定位方法，虽非运动教学场景，但其人体中心定位与身体区域选择方法可能迁移到运动动作分析。"
+      }
+    ]
+  }
+]
