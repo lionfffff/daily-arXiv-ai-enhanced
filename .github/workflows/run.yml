@@ -4,11 +4,9 @@
 name: arXiv-daily-ai-enhanced
 
 on:
-  schedule:
-    # arXiv announces Sun–Thu at 20:00 US Eastern; allow 5 minutes to update.
-    # Beijing: Mon–Fri 08:05 during US DST, 09:05 during standard time.
-    - cron: "5 20 * * 0-4"
-      timezone: "America/New_York"
+  # Scheduled runs now execute directly on the Windows computer.
+  # See local_runner/README.md for timing and missed-run catch-up.
+  # Keep this manual fallback without duplicating paid AI processing.
   workflow_dispatch:
 
 permissions:

@@ -68,7 +68,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\local_runner\windows\Insta
 
 任务名称为 `DailyArxiv Research Update`，以当前账户运行，不要求保存 Windows 登录密码。必须登录该账户后才能运行；冷启动停留在登录界面时不会运行，已登录但锁屏可以运行。安装器只注册任务，不强制开始一次付费处理。
 
-先启动真实任务并检查本机结果，再关闭仓库 `.github/workflows/run.yml` 中的自动 `schedule`，保留 `workflow_dispatch` 手动工作流作为备用。两套定时同时开启可能重复调用 AI；Windows 本机处理不需要 GitHub 的计划任务。
+本机已于 2026-10-26 通过真实任务验证，完成抓取、筛选、中文摘要与报告生成，并成功推送 `data` 分支。仓库 `.github/workflows/run.yml` 已移除自动 `schedule`，保留 `workflow_dispatch` 手动备用。两套定时同时开启可能重复调用 AI；请勿重新加入 GitHub 定时规则。
 
 ## 检查与手动执行
 

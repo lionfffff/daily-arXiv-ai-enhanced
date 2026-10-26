@@ -9,6 +9,9 @@ $python = Join-Path $codeDirectory '.venv\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $python)) { throw 'DailyArxiv Python environment is missing. Run the installer first.' }
 New-Item -ItemType Directory -Force -Path $Workspace | Out-Null
 $env:PYTHONUTF8 = '1'
+# Decode Python's UTF-8 output correctly in Windows PowerShell 5.
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = [Console]::OutputEncoding
 $env:GCM_INTERACTIVE = 'never'
 $env:GIT_TERMINAL_PROMPT = '0'
 $env:OPENAI_BASE_URL = 'https://api.deepseek.com'
