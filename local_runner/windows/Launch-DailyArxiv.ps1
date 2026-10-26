@@ -1,5 +1,5 @@
 param(
-    [string]$Workspace = (Join-Path $env:LOCALAPPDATA 'DailyArxiv'),
+    [string]$Workspace = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'DailyArxiv'),
     [switch]$RunNow,
     [switch]$Status
 )

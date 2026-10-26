@@ -1,5 +1,5 @@
 param(
-    [string]$Workspace = (Join-Path $env:LOCALAPPDATA 'DailyArxiv'),
+    [string]$Workspace = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'DailyArxiv'),
     [string]$TaskName = 'DailyArxiv Research Update'
 )
 $ErrorActionPreference = 'Stop'
@@ -37,7 +37,7 @@ $xml = @"
     <AllowStartOnDemand>true</AllowStartOnDemand><Enabled>true</Enabled><Hidden>false</Hidden>
     <RunOnlyIfIdle>false</RunOnlyIfIdle><WakeToRun>false</WakeToRun><ExecutionTimeLimit>PT55M</ExecutionTimeLimit><Priority>7</Priority>
   </Settings>
-  <Actions Context="Author"><Exec><Command>$command</Command><Arguments>$arguments</Arguments><WorkingDirectory>$([Security.SecurityElement]::Escape($codeDirectory))</WorkingDirectory></Exec></Actions>
+  <Actions Context="Author"><Exec><Command>$command</Command><Arguments>$arguments</Arguments></Exec></Actions>
 </Task>
 "@
 Register-ScheduledTask -TaskName $TaskName -Xml $xml -Force | Out-Null

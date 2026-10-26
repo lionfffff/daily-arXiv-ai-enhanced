@@ -1,4 +1,4 @@
-param([string]$Workspace = (Join-Path $env:LOCALAPPDATA 'DailyArxiv'))
+param([string]$Workspace = (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'DailyArxiv'))
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
