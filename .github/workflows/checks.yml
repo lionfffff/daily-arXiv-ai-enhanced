@@ -3,9 +3,9 @@ name: Pipeline checks
 on:
   push:
     branches: [main]
-    paths: ['ai/**', 'daily_arxiv/**', '.github/workflows/**', 'pyproject.toml', 'uv.lock']
+    paths: ['ai/**', 'daily_arxiv/**', 'local_runner/**', '.github/workflows/**', 'pyproject.toml', 'uv.lock']
   pull_request:
-    paths: ['ai/**', 'daily_arxiv/**', '.github/workflows/**', 'pyproject.toml', 'uv.lock']
+    paths: ['ai/**', 'daily_arxiv/**', 'local_runner/**', '.github/workflows/**', 'pyproject.toml', 'uv.lock']
   workflow_dispatch:
 
 permissions:
@@ -26,3 +26,4 @@ jobs:
           source .venv/bin/activate
           python -m unittest discover -s ai/tests -v
           python -m unittest discover -s daily_arxiv/tests -v
+          python -m unittest discover -s local_runner/tests -v
