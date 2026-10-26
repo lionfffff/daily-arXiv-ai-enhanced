@@ -29,6 +29,7 @@ FAILED_AI_VALUES = {
     "Conclusion extraction failed",
 }
 OWNER_FILE = ".daily-arxiv-local-runner.json"
+WAITING_RELEASE_EXIT_CODE = 3
 
 
 def utc_now():
@@ -233,10 +234,12 @@ def publish_batch(runtime, attempt, checkout, remote, target_date, language, com
     raise RuntimeError("Publication failed after three fetch-and-merge attempts; complete local results are preserved")
 
 
-def run_pipeline(repo: Path, runtime: Path, target_date: str, env=None, *, no_publish=False):
+def run_pipeline(repo: Path, runtime: Path, target_date: str, env=None, *, no_publish=False, expected_listing_date=None):
     date.fromisoformat(target_date)
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", target_date):
         raise ValueError("Date must use YYYY-MM-DD")
+    if expected_listing_date:
+        expected_listing_date = date.fromisoformat(expected_listing_date).isoformat()
     repo, runtime = Path(repo).resolve(), Path(runtime).resolve()
     if runtime == repo or repo.is_relative_to(runtime / "runs") or runtime.is_relative_to(repo):
         raise ValueError("Runtime must be separate from the source repository")
@@ -261,6 +264,8 @@ def run_pipeline(repo: Path, runtime: Path, target_date: str, env=None, *, no_pu
         attempt = runtime / "runs" / target_date / (datetime.now(timezone.utc).strftime("%H%M%S") + "-" + uuid.uuid4().hex[:8])
         attempt.mkdir(parents=True)
         status = {"date": target_date, "status": "running", "stage": "prepare", "started_at": utc_now(), "attempt": str(attempt), "counts": {}, "published": False}
+        if expected_listing_date:
+            status["expected_listing_date"] = expected_listing_date
         commands = Commands(attempt / "logs", environment)
 
         def stage(name):
@@ -283,7 +288,16 @@ def run_pipeline(repo: Path, runtime: Path, target_date: str, env=None, *, no_pu
             raw = checkout / "data" / f"{target_date}.jsonl"
             enhanced = checkout / "data" / f"{target_date}_AI_enhanced_{language}.jsonl"
             stage("crawl")
-            commands.run([sys.executable, "-X", "utf8", "-m", "daily_arxiv.crawl", "--output", f"../data/{raw.name}"], cwd=checkout / "daily_arxiv", label="crawl")
+            crawl_args = [sys.executable, "-X", "utf8", "-m", "daily_arxiv.crawl", "--output", f"../data/{raw.name}"]
+            if expected_listing_date:
+                crawl_args.extend(["--expected-listing-date", expected_listing_date])
+            crawl_code, _ = commands.run(crawl_args, cwd=checkout / "daily_arxiv", label="crawl", allowed=(0, WAITING_RELEASE_EXIT_CODE))
+            if crawl_code == WAITING_RELEASE_EXIT_CODE:
+                status.update(status="waiting_release", reason="announcement_not_ready", finished_at=utc_now())
+                write_json(attempt / "status.json", status)
+                write_json(runtime / "status.json", status)
+                print(json.dumps(status, ensure_ascii=False), flush=True)
+                return status
             if not raw.is_file():
                 raise RuntimeError("Crawler did not produce the requested data file")
             shutil.copy2(raw, attempt / "original-crawl.jsonl")
@@ -335,14 +349,15 @@ def main(argv=None):
     parser.add_argument("--workspace", type=Path, required=True)
     parser.add_argument("--date", required=True, help="Fixed Beijing calendar date, YYYY-MM-DD")
     parser.add_argument("--no-publish", action="store_true")
+    parser.add_argument("--expected-listing-date", help="Minimum announced batch date, supplied by the scheduler")
     args = parser.parse_args(argv)
     try:
-        run_pipeline(Path(__file__).resolve().parents[1], args.workspace, args.date, no_publish=args.no_publish)
+        result = run_pipeline(Path(__file__).resolve().parents[1], args.workspace, args.date, no_publish=args.no_publish, expected_listing_date=args.expected_listing_date)
     except Exception as exc:
         # Detailed (redacted) failure information is also preserved in status.json.
         print(f"Local pipeline failed: {type(exc).__name__}; see {args.workspace / 'status.json'}", file=sys.stderr)
         return 1
-    return 0
+    return WAITING_RELEASE_EXIT_CODE if result["status"] == "waiting_release" else 0
 
 
 if __name__ == "__main__":

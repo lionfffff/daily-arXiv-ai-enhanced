@@ -25,6 +25,8 @@ NEW_YORK = ZoneInfo("America/New_York")
 BEIJING = ZoneInfo("Asia/Shanghai")
 MAX_ATTEMPTS = 3
 RETRY_DELAY = timedelta(minutes=10)
+RELEASE_RECHECK_DELAY = timedelta(minutes=5)
+WAITING_RELEASE_EXIT_CODE = 3
 PIPELINE_TIMEOUT_SECONDS = 45 * 60
 CODE_ROOT = Path(__file__).resolve().parents[1]
 
@@ -137,7 +139,7 @@ def network_ready(base_url: str) -> tuple[bool, str]:
     return True, ""
 
 
-def run_pipeline(workspace: Path, date: str) -> int:
+def run_pipeline(workspace: Path, date: str, expected_listing_date: str) -> int:
     folder = workspace / "logs"
     folder.mkdir(parents=True, exist_ok=True)
     stamp = now_utc().strftime("%Y%m%dT%H%M%SZ")
@@ -146,7 +148,8 @@ def run_pipeline(workspace: Path, date: str) -> int:
     with output_path.open("a", encoding="utf-8") as stream:
         process = subprocess.Popen(
             [sys.executable, "-X", "utf8", "-m", "local_runner.pipeline",
-             "--workspace", str(workspace), "--date", date],
+             "--workspace", str(workspace), "--date", date,
+             "--expected-listing-date", expected_listing_date],
             cwd=CODE_ROOT,
             stdout=stream,
             stderr=subprocess.STDOUT,
@@ -238,7 +241,7 @@ def run_once(workspace: Path, *, run_now: bool = False) -> int:
         run_date = now.astimezone(BEIJING).date().isoformat()
         error = None
         try:
-            returncode = run_pipeline(workspace, run_date)
+            returncode = run_pipeline(workspace, run_date, slot.date)
         except subprocess.TimeoutExpired:
             returncode = 1
             error = f"论文处理超过 {PIPELINE_TIMEOUT_SECONDS // 60} 分钟超时"
@@ -247,7 +250,14 @@ def run_once(workspace: Path, *, run_now: bool = False) -> int:
             error = f"无法启动论文处理：{type(exc).__name__}"
         finished = now_utc().astimezone(BEIJING)
         state["last_run_time"] = finished.isoformat()
-        if returncode == 0:
+        if returncode == WAITING_RELEASE_EXIT_CODE:
+            state.update(
+                status="waiting_release", attempts=max(0, state["attempts"] - 1),
+                next_retry_at=(finished + RELEASE_RECHECK_DELAY).isoformat(),
+                last_error=None,
+            )
+            log(workspace, f"arXiv 尚未完整发布 {slot.date} 公告；5 分钟后再检查，不计入处理失败次数。")
+        elif returncode == 0:
             state.update(
                 status="success", last_success_slot=slot.date,
                 last_success_at=finished.isoformat(), next_retry_at=None, last_error=None,
@@ -262,7 +272,7 @@ def run_once(workspace: Path, *, run_now: bool = False) -> int:
             log(workspace, f"公告日 {slot.date} 第 {state['attempts']} 次失败：{state['last_error']}。"
                 + ("已达到自动重试上限。" if state["attempts"] >= MAX_ATTEMPTS else "至少 10 分钟后重试。"))
         write_state(workspace, state)
-        return returncode
+        return 0 if returncode == WAITING_RELEASE_EXIT_CODE else returncode
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,8 +1,24 @@
 import copy
+from datetime import date
 import os
 import re
 
 import scrapy
+
+
+MONTHS = {name: number for number, name in enumerate((
+    "January", "February", "March", "April", "May", "June", "July", "August",
+    "September", "October", "November", "December",
+), start=1)}
+
+
+def listing_date(sections):
+    """Read arXiv's announcement date without depending on Windows locale."""
+    for heading in sections:
+        match = re.fullmatch(r"Showing new listings for [A-Za-z]+, (\d{1,2}) ([A-Za-z]+) (\d{4})", heading)
+        if match and match.group(2) in MONTHS:
+            return date(int(match.group(3)), MONTHS[match.group(2)], int(match.group(1)))
+    return None
 
 
 def text_content(selector, prefix=""):
@@ -22,7 +38,7 @@ class ArxivSpider(scrapy.Spider):
     allowed_domains = ["arxiv.org"]
     section_types = {"new": "new", "cross": "cross", "replacement": "replacement"}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, expected_listing_date=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.target_categories = {category.strip() for category in os.environ.get("CATEGORIES", "cs.CV").split(",") if category.strip()}
         if not self.target_categories:
@@ -31,6 +47,9 @@ class ArxivSpider(scrapy.Spider):
         self.pending_metadata = {}
         self.detail_cache = {}
         self.expected_entries = 0
+        self.expected_listing_date = date.fromisoformat(expected_listing_date) if expected_listing_date else None
+        self.listing_dates = {}
+        self.pending_listing_dates = {}
         self.start_urls = [f"https://arxiv.org/list/{cat}/new" for cat in sorted(self.target_categories)]
 
     def parse(self, response):
@@ -38,6 +57,16 @@ class ArxivSpider(scrapy.Spider):
             raise ValueError(f"Unexpected arXiv listing page: {response.url}")
         sections = [heading.strip() for heading in response.css("h3::text").getall()]
         self.logger.info("arXiv listing %s (HTTP %s): %s", response.url, response.status, sections)
+        announced = listing_date(sections)
+        if announced:
+            self.listing_dates[response.url] = announced.isoformat()
+        if self.expected_listing_date:
+            if announced is None:
+                raise ValueError(f"Cannot verify arXiv listing date: {response.url}")
+            if announced < self.expected_listing_date:
+                self.pending_listing_dates[response.url] = announced.isoformat()
+                self.logger.info("Waiting for arXiv announcement %s; %s still shows %s", self.expected_listing_date, response.url, announced)
+                return
         section_starts = []
         for li in response.css("div[id=dlpage] ul li"):
             href = li.css("a::attr(href)").get()

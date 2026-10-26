@@ -1,6 +1,7 @@
 """Collect listing metadata and verify missing versions on public abstract pages."""
 
 import argparse
+from datetime import date
 import json
 import os
 import tempfile
@@ -14,6 +15,24 @@ from .pipelines import DailyArxivPipeline
 from .spiders.arxiv import ArxivSpider
 
 
+WAITING_RELEASE_EXIT_CODE = 3
+
+
+class ReleaseNotReady(RuntimeError):
+    """The source still advertises an earlier announcement, not an empty day."""
+
+
+def validate_release_dates(expected, listing_dates, expected_urls):
+    if expected is None:
+        return
+    missing = set(expected_urls) - set(listing_dates)
+    if missing:
+        raise RuntimeError(f"Cannot verify announcement dates for: {', '.join(sorted(missing))}")
+    stale = {url: value for url, value in listing_dates.items() if date.fromisoformat(value) < expected}
+    if stale:
+        raise ReleaseNotReady(f"Waiting for arXiv announcement {expected}: {json.dumps(stale, ensure_ascii=False)}")
+
+
 def validate_crawl(stats, expected_urls, parsed_urls):
     if stats.get("finish_reason") != "finished" or stats.get("log_count/ERROR", 0):
         raise RuntimeError("arXiv listing crawl failed; see the preceding Scrapy errors")
@@ -22,7 +41,7 @@ def validate_crawl(stats, expected_urls, parsed_urls):
         raise RuntimeError(f"Incomplete arXiv listing crawl: {', '.join(sorted(missing))}")
 
 
-def collect_listings():
+def collect_listings(expected_listing_date=None):
     settings = get_project_settings()
     settings.setdict({
         "ITEM_PIPELINES": {},
@@ -42,10 +61,16 @@ def collect_listings():
         items.append(dict(item))
 
     crawler.signals.connect(collect, signal=signals.item_scraped, weak=False)
-    process.crawl(crawler).addErrback(lambda failure: failures.append(failure.getErrorMessage()))
+    process.crawl(crawler, expected_listing_date=expected_listing_date).addErrback(lambda failure: failures.append(failure.getErrorMessage()))
     process.start()
     if failures:
         raise RuntimeError(f"Could not run arXiv spider: {failures}")
+    if crawler.stats.get_stats().get("log_count/ERROR", 0):
+        raise RuntimeError("arXiv listing crawl failed; see the preceding Scrapy errors")
+    validate_release_dates(
+        date.fromisoformat(expected_listing_date) if expected_listing_date else None,
+        crawler.spider.listing_dates, crawler.spider.start_urls,
+    )
     validate_crawl(crawler.stats.get_stats(), crawler.spider.start_urls, crawler.spider.parsed_listing_urls)
     if crawler.spider.pending_metadata or len(items) != crawler.spider.expected_entries:
         raise RuntimeError(
@@ -71,8 +96,13 @@ def write_papers(path, papers):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--expected-listing-date", type=date.fromisoformat, help="Wait until every category lists at least this announcement date")
     args = parser.parse_args()
-    items = collect_listings()
+    try:
+        items = collect_listings(args.expected_listing_date.isoformat() if args.expected_listing_date else None)
+    except ReleaseNotReady as exc:
+        print(str(exc), flush=True)
+        return WAITING_RELEASE_EXIT_CODE
     pipeline = DailyArxivPipeline()
     if not all(pipeline.has_listing_metadata(item) for item in items):
         raise RuntimeError("Incomplete page metadata; refusing to publish unverified versions")
@@ -88,7 +118,8 @@ def main():
     if summary_path := os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(summary_path, "a", encoding="utf-8") as summary:
             summary.write(f"抓取完整：{counts['listing_entries']} 条分类记录，{counts['unique_papers']} 篇不同论文；其中 {counts['abstract_page_papers']} 篇通过摘要页确认版本，其余直接复用列表元数据。\n\n")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

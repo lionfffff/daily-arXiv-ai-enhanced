@@ -65,6 +65,11 @@ class LifecycleTests(unittest.TestCase):
         class FakeCommands(pipeline.Commands):
             def run(self, args, *, cwd, label, allowed=(0,)):
                 labels.append(label)
+                if label == "crawl" and behavior == "waiting":
+                    self_expected_date = args[args.index("--expected-listing-date") + 1]
+                    if self_expected_date != "2026-10-26":
+                        raise AssertionError("Expected announcement date was not passed to crawler")
+                    return pipeline.WAITING_RELEASE_EXIT_CODE, "Waiting for release"
                 if label == "crawl":
                     pipeline.write_rows(raw, [paper()])
                 if label == "deduplicate" and behavior == "duplicate":
@@ -89,11 +94,12 @@ class LifecycleTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Chinese abstract"):
                     pipeline.run_pipeline(repo, runtime, "2026-10-26", {"OPENAI_API_KEY": "test-secret"})
             else:
-                pipeline.run_pipeline(repo, runtime, "2026-10-26", {"OPENAI_API_KEY": "test-secret"}, no_publish=True)
+                pipeline.run_pipeline(repo, runtime, "2026-10-26", {"OPENAI_API_KEY": "test-secret"}, no_publish=True, expected_listing_date="2026-10-26")
             publish.assert_not_called()
         self.assertEqual(original_file.read_text(encoding="utf-8"), "Do not change me")
         status = json.loads((runtime / "status.json").read_text(encoding="utf-8"))
-        self.assertTrue((Path(status["attempt"]) / "original-crawl.jsonl").is_file())
+        if behavior != "waiting":
+            self.assertTrue((Path(status["attempt"]) / "original-crawl.jsonl").is_file())
         self.assertNotIn("test-secret", (runtime / "status.json").read_text(encoding="utf-8"))
         return status, labels
 
@@ -103,6 +109,17 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(status["reason"], "no_new_content")
         self.assertEqual(status["counts"]["new_versions"], 0)
         self.assertNotIn("relevance", labels)
+
+    def test_stale_announcement_waits_before_dedup_or_paid_processing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            status, labels = self.run_fixture(directory, "waiting")
+        self.assertEqual(status["status"], "waiting_release")
+        self.assertFalse(status["published"])
+        self.assertEqual(labels, ["crawl"])
+
+    def test_cli_propagates_waiting_release_exit_code(self):
+        with patch.object(pipeline, "run_pipeline", return_value={"status": "waiting_release"}):
+            self.assertEqual(pipeline.main(["--workspace", "fixture", "--date", "2026-10-26", "--expected-listing-date", "2026-10-26"]), 3)
 
     def test_empty_relevance_run_succeeds_without_enhancement(self):
         with tempfile.TemporaryDirectory() as directory:

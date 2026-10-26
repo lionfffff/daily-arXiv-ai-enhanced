@@ -53,7 +53,7 @@ class SchedulerTests(unittest.TestCase):
 
     def test_starting_late_runs_once_and_records_release(self):
         self.assertEqual(scheduler.run_once(self.workspace), 0)
-        self.pipeline.assert_called_once_with(self.workspace, "2026-10-26")
+        self.pipeline.assert_called_once_with(self.workspace, "2026-10-26", "2026-10-26")
         self.assertEqual(scheduler.read_state(self.workspace)["last_success_slot"], "2026-10-26")
         scheduler.run_once(self.workspace)
         self.assertEqual(self.pipeline.call_count, 1)
@@ -102,7 +102,7 @@ class SchedulerTests(unittest.TestCase):
     def test_catch_up_before_today_slot_uses_actual_date_without_marking_future(self):
         self.now = datetime.fromisoformat("2026-10-27T07:00:00+08:00")
         scheduler.run_once(self.workspace, run_now=True)
-        self.pipeline.assert_called_once_with(self.workspace, "2026-10-27")
+        self.pipeline.assert_called_once_with(self.workspace, "2026-10-27", "2026-10-26")
         self.assertEqual(scheduler.read_state(self.workspace)["last_success_slot"], "2026-10-26")
 
     def test_retry_wait_starts_after_long_failed_run(self):
@@ -116,6 +116,28 @@ class SchedulerTests(unittest.TestCase):
         self.assertEqual(self.pipeline.call_count, 1)
         state = scheduler.read_state(self.workspace)
         self.assertEqual(datetime.fromisoformat(state["next_retry_at"]), self.now + timedelta(minutes=10))
+
+    def test_delayed_or_holiday_release_waits_without_consuming_attempts(self):
+        self.pipeline.return_value = scheduler.WAITING_RELEASE_EXIT_CODE
+        for _ in range(5):
+            self.assertEqual(scheduler.run_once(self.workspace), 0)
+            state = scheduler.read_state(self.workspace)
+            self.assertEqual(state["status"], "waiting_release")
+            self.assertEqual(state["attempts"], 0)
+            self.assertNotIn("last_success_slot", state)
+            self.now += timedelta(minutes=5)
+        self.assertEqual(self.pipeline.call_count, 5)
+        self.pipeline.return_value = 0
+        scheduler.run_once(self.workspace)
+        self.assertEqual(scheduler.read_state(self.workspace)["last_success_slot"], "2026-10-26")
+
+    def test_waiting_for_release_preserves_existing_processing_failure_count(self):
+        scheduler.write_state(self.workspace, {"active_slot": "2026-10-26", "attempts": 2})
+        self.pipeline.return_value = scheduler.WAITING_RELEASE_EXIT_CODE
+        scheduler.run_once(self.workspace, run_now=True)
+        state = scheduler.read_state(self.workspace)
+        self.assertEqual(state["attempts"], 2)
+        self.assertEqual(state["status"], "waiting_release")
 
     def test_new_slot_status_is_due_after_previous_retry_limit(self):
         scheduler.write_state(self.workspace, {

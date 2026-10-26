@@ -45,6 +45,7 @@ Set-Location $arxivApp
 $env:UV_PYTHON_INSTALL_DIR = Join-Path $arxivWorkspace 'python'
 uv python install 3.12
 $arxivPython = uv python find --no-project --managed-python 3.12
+& $arxivPython -m venv --without-pip .venv
 uv sync --frozen --python $arxivPython
 
 # 确认当前账户的 GitHub 凭据可用；第一次可能需要浏览器登录。
@@ -52,6 +53,8 @@ git fetch origin data
 ```
 
 安装后不要直接搬动 `.venv` 或 `python` 目录，虚拟环境包含基础解释器的绝对路径。迁移时在新位置重新运行上述 Python 安装和 `uv sync`。如果在 Codex 中安装，最终应执行下方的真实任务验证，不能只以 Codex 终端中的成功为准。
+
+本机使用 CPython 自带的 `venv` 创建环境，再由 uv 安装锁定依赖。此电脑的应用控制曾阻止 uv 生成的环境启动器；标准 `venv` 启动器已通过实际启动验证，无需修改 Windows 安全策略。
 
 在 `app` 目录配置密钥与注册任务：
 
@@ -92,6 +95,8 @@ Get-Content -LiteralPath (Join-Path $arxivWorkspace 'status.json') -Encoding UTF
 ```
 
 任务仍为 `Running` 时应等待完成。`LastTaskResult=0` 也可能表示等待联网、等待密钥或该批次已完成，应同时看 `scheduler-state.json` 的状态；`status.json` 仅在实际处理开始后创建。抓取到 0 篇新增、全部被去重或筛选后没有相关论文都可以是成功完成。具体步骤日志保存在 `runs\日期\尝试编号\logs`，调度日志保存在 `logs\scheduler.log`。
+
+调度器会核对每个分类页面上显示的公告日期。到点后 arXiv 尚未更新、节假日延迟或部分分类仍返回旧批次时，状态为 `waiting_release`，5 分钟后继续检查；不会将该公告日标为完成，也不会进入 AI 处理或消耗三次处理失败重试额度。`-RunNow` 仍核对最近一个已到期公告日，提前手动运行不会把尚未到时的公告标为完成。
 
 本机 API Key 与 GitHub Secrets 相互独立；更换密钥时重新打开 `Set-ApiKey.ps1` 并传入相同的 `-Workspace`。GitHub 凭据失效时，在 `app` 仓库完成一次 `git fetch` 的登录后再运行。连续失败达到重试上限时，先修复日志中的问题，再使用 `-RunNow` 手动验证；手动运行仍要求联网和有效密钥。
 
